@@ -9,7 +9,8 @@ import { toast } from "sonner";
 
 export function useTimbratura() {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isManagerFree = role === "manager";
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const oggi = isoData(new Date());
@@ -37,11 +38,12 @@ export function useTimbratura() {
 
   const { data: timbOggi } = useQuery({
     enabled: !!user,
-    queryKey: ["timb-oggi", oggi],
+    queryKey: ["timb-oggi", oggi, user?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("timbrature")
         .select("*")
+        .eq("dipendente_id", user!.id)
         .eq("data", oggi)
         .maybeSingle();
       return data;
@@ -65,7 +67,7 @@ export function useTimbratura() {
   const inTurno = !!timbOggi && !timbOggi.orario_clock_out;
   const completato = !!timbOggi?.orario_clock_out;
 
-  const win = computeWindow(turnoOggi, now);
+  const win = computeWindow(turnoOggi, now, isManagerFree);
   // Se sono già in turno, il bottone serve a fare clock-out → sempre disponibile.
   const canClock: boolean = inTurno
     ? true

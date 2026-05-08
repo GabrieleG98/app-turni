@@ -19,17 +19,21 @@ const FIVE_MIN_MS = 5 * 60 * 1000;
 export function computeWindow(
   turno: TurnoLite | null | undefined,
   now: Date = new Date(),
+  freeMode: boolean = false,
 ): { state: WindowState; minutiRitardo: number; inizio: Date | null; fine: Date | null } {
-  if (!turno) return { state: "no-shift", minutiRitardo: 0, inizio: null, fine: null };
+  if (!turno) {
+    if (freeMode) return { state: "available", minutiRitardo: 0, inizio: null, fine: null };
+    return { state: "no-shift", minutiRitardo: 0, inizio: null, fine: null };
+  }
   const inizio = new Date(`${turno.data}T${turno.ora_inizio}`);
   let fine = new Date(`${turno.data}T${turno.ora_fine}`);
   if (fine.getTime() <= inizio.getTime()) fine = new Date(fine.getTime() + 24 * 60 * 60 * 1000);
   const t = now.getTime();
   const start = inizio.getTime();
   const end = fine.getTime();
-  if (t < start - FIVE_MIN_MS) return { state: "too-early", minutiRitardo: 0, inizio, fine };
+  if (t < start - FIVE_MIN_MS) return { state: freeMode ? "available" : "too-early", minutiRitardo: 0, inizio, fine };
   if (t <= start + FIVE_MIN_MS) return { state: "available", minutiRitardo: 0, inizio, fine };
-  if (t > end) return { state: "missed", minutiRitardo: Math.floor((t - start) / 60000), inizio, fine };
+  if (t > end) return { state: freeMode ? "available" : "missed", minutiRitardo: Math.floor((t - start) / 60000), inizio, fine };
   return { state: "late", minutiRitardo: Math.floor((t - start) / 60000), inizio, fine };
 }
 
