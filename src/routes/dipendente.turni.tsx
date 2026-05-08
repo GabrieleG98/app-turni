@@ -44,6 +44,7 @@ function MieiTurni() {
   const giorni = giorniSettimana(inizio);
   const oggi = isoData(new Date());
   const [swap, setSwap] = useState<SwapForm | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
 
   const { data: turni = [] } = useQuery({
     enabled: !!user,
@@ -222,9 +223,34 @@ function MieiTurni() {
                 >
                   <SelectTrigger><SelectValue placeholder="Scegli un collega" /></SelectTrigger>
                   <SelectContent>
-                    {colleghi.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome} {c.cognome}</SelectItem>
-                    ))}
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        value={swapSearch}
+                        onChange={(e) => setSwapSearch(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        placeholder="Cerca per nome o reparto…"
+                        className="w-full h-8 rounded-md border bg-background px-2 text-sm"
+                      />
+                    </div>
+                    {colleghi.length === 0 && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">Nessun collega disponibile</div>
+                    )}
+                    {colleghi
+                      .filter((c) => {
+                        const q = swapSearch.trim().toLowerCase();
+                        if (!q) return true;
+                        return (
+                          `${c.nome} ${c.cognome}`.toLowerCase().includes(q) ||
+                          (c.reparto ?? "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nome} {c.cognome}
+                          {c.reparto ? <span className="text-muted-foreground ml-1">· {c.reparto}</span> : null}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
