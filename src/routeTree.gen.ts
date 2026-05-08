@@ -18,6 +18,7 @@ import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DipendenteIndexRouteImport } from './routes/dipendente.index'
 import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
+import { Route as ManagerTimbraPerRouteImport } from './routes/manager.timbra-per'
 import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
@@ -76,6 +77,11 @@ const DipendenteIndexRoute = DipendenteIndexRouteImport.update({
 const ManagerTurniRoute = ManagerTurniRouteImport.update({
   id: '/turni',
   path: '/turni',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const ManagerTimbraPerRoute = ManagerTimbraPerRouteImport.update({
+  id: '/timbra-per',
+  path: '/timbra-per',
   getParentRoute: () => ManagerRoute,
 } as any)
 const ManagerTasksRoute = ManagerTasksRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente/'
     | '/manager/dipendenti/$id'
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente'
     | '/manager/dipendenti/$id'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente/'
     | '/manager/dipendenti/$id'
@@ -374,6 +386,13 @@ declare module '@tanstack/react-router' {
       path: '/turni'
       fullPath: '/manager/turni'
       preLoaderRoute: typeof ManagerTurniRouteImport
+      parentRoute: typeof ManagerRoute
+    }
+    '/manager/timbra-per': {
+      id: '/manager/timbra-per'
+      path: '/timbra-per'
+      fullPath: '/manager/timbra-per'
+      preLoaderRoute: typeof ManagerTimbraPerRouteImport
       parentRoute: typeof ManagerRoute
     }
     '/manager/tasks': {
@@ -507,6 +526,7 @@ interface ManagerRouteChildren {
   ManagerReportRoute: typeof ManagerReportRoute
   ManagerScambiRoute: typeof ManagerScambiRoute
   ManagerTasksRoute: typeof ManagerTasksRoute
+  ManagerTimbraPerRoute: typeof ManagerTimbraPerRoute
   ManagerTurniRoute: typeof ManagerTurniRoute
   ManagerDipendentiIdRoute: typeof ManagerDipendentiIdRoute
   ManagerDipendentiIndexRoute: typeof ManagerDipendentiIndexRoute
@@ -520,6 +540,7 @@ const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerReportRoute: ManagerReportRoute,
   ManagerScambiRoute: ManagerScambiRoute,
   ManagerTasksRoute: ManagerTasksRoute,
+  ManagerTimbraPerRoute: ManagerTimbraPerRoute,
   ManagerTurniRoute: ManagerTurniRoute,
   ManagerDipendentiIdRoute: ManagerDipendentiIdRoute,
   ManagerDipendentiIndexRoute: ManagerDipendentiIndexRoute,
