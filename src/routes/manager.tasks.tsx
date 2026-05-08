@@ -51,6 +51,7 @@ function ManagerTasks() {
   const [giorni, setGiorni] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
   const [assegnatoA, setAssegnatoA] = useState<string>("__all__");
   const [reparto, setReparto] = useState("");
+  const [richiedeFoto, setRichiedeFoto] = useState(false);
 
   const { data: templates = [] } = useQuery({
     queryKey: ["task-templates"],
