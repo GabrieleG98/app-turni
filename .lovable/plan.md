@@ -1,62 +1,48 @@
-# Sidebar dipendente + Task evolute
+## Modifiche richieste
 
-## 1. Layout dipendente con sidebar (no bottom nav)
+### 1. Voce "Correzione timbratura" nei menu
 
-**Nuovo `src/components/dipendente-sidebar.tsx`**: speculare a `manager-sidebar.tsx` ma con voci dipendente (Oggi, Turni, Calendario, Disponibilità, Tasks, Chat, Profilo) + footer con nome utente e logout.
+Esiste già `CorrezioneDialog`, ma non c'è un punto d'accesso dedicato dal menu. Aggiungerò:
 
-**`src/routes/dipendente.tsx` — riscrittura**:
-- Avvolge tutto in `SidebarProvider` con `<DipendenteSidebar />` + area principale.
-- Header sticky in alto: `SidebarTrigger` (apre il drawer su mobile, collassa su desktop) + titolo + `NotificheBell` + `ThemeToggle`.
-- `<TimbraFAB />` (lo stesso usato dai manager) sempre visibile in basso a destra → mantiene l'azione di timbratura senza bottom nav.
-- Rimuovo l'uso di `<DipendenteBottomNav />` e il bottone calendario floating.
+- **Sidebar dipendente** (`src/components/dipendente-sidebar.tsx`): nuova voce "Correzioni" con icona `FileWarning` che apre una pagina dedicata.
+- **Sidebar manager** (`src/components/manager-sidebar.tsx`): la voce "Correzioni" punta già a `/manager/correzioni` — verificherò sia ben in evidenza.
+- **Nuova pagina** `src/routes/dipendente.correzioni.tsx`: lista delle proprie richieste (pending / approvate / rifiutate) con bottone "Nuova richiesta" che apre `CorrezioneDialog`. Mostra status e note del manager.
 
-**`src/components/dipendente-bottom-nav.tsx`**: cancellato.
+### 2. "Timbra per" sempre disponibile per ogni clock-in/out
 
-**Padding**: rimuovo `pb-20` dal layout dato che non c'è più la barra inferiore; le pagine figlie già scrollano internamente.
+Stato attuale: `manager.timbra-per.tsx` è ristretto a `isOwner` e mostra una sola riga per dipendente al giorno.
 
-## 2. Tasks: dettaglio, foto, notifiche
+Modifiche:
+- **Accesso**: aprire la pagina a tutti i manager (non solo owner) → cambiare il guard da `isOwner` a `has_role manager`.
+- **Voce sidebar**: assicurarsi che sia visibile nella sidebar manager con icona chiara.
+- **Multi-sessione**: rimuovere `timbOf()` che prende solo la prima timbratura. Per ogni dipendente mostrare:
+  - tutte le sessioni di oggi (lista o conteggio + ultima)
+  - bottone "Clock-in" sempre disponibile (anche se ce ne sono già state, per gestire multi-sessione)
+  - bottone "Clock-out" sulla sessione attualmente aperta
+- **Manager nella lista**: includere anche i profili manager nell'elenco, così ognuno (inclusi i manager) può essere timbrato in qualsiasi momento.
 
-### Schema (migration)
-- `task_template`: aggiungo `richiede_foto boolean not null default false`.
-- `task_assegnati`: aggiungo `foto_url text` e `note text` (già presente `note`, riuso).
-- Bucket Storage `task-foto` (privato) + RLS:
-  - dipendente può `insert/select` solo cartella `{auth.uid}/...`
-  - manager può `select` tutto.
-- Estendo enum `notifica_tipo` con `task` (se non già presente).
+### 3. Foto obbligatoria per ogni clock-in/out
 
-### Trigger di notifica
-- `notify_task_assegnato` (AFTER INSERT su `task_assegnati`): notifica `dipendente_id` con link `/dipendente/tasks`.
-- `notify_task_completato` (AFTER UPDATE su `task_assegnati`, quando `completato_at` passa da NULL a valorizzato): notifica tutti i manager con titolo task + nome dipendente, link `/manager/tasks`.
+Stato attuale: la foto è opzionale (il file picker si apre ma se l'utente annulla la timbratura va comunque a buon fine senza foto).
 
-### Promemoria task non completate
-- Server route `src/routes/api/public/hooks/task-reminder.ts`: per ogni dipendente con task aperti del giorno, crea una notifica "Hai N task da completare".
-- Cron pg_cron alle 19:00 ogni giorno (via tool insert).
+Modifiche:
+- **Hook `use-timbratura.ts`**: in `clockIn` / `clockOut`, se `file` è `null` → mostrare errore e abortire ("Foto richiesta per timbrare").
+- **`TimbraFAB`**: nel handler `onFile`, se l'utente chiude il picker senza selezionare nulla, non chiamare clock-in/out e mostrare un toast "Scatta una foto per timbrare".
+- **`manager.timbra-per`**: aggiungere selettore foto obbligatorio per riga (input `capture="environment"`) prima di permettere clock-in/out manuale; foto salvata in `timbrature-foto/<dipendente_id>/...` riutilizzando `uploadSelfie`.
+- **UI feedback**: il dialog di conferma `TimbraConfermaDialog` già supporta `fotoUrl`, mostriamo sempre la miniatura della foto appena scattata.
 
-### UI dipendente — `src/routes/dipendente.tasks.tsx`
-- Click sulla card apre un `Dialog` di dettaglio:
-  - titolo, descrizione, stato.
-  - se `template.richiede_foto = true` e non completato: input file (camera) **obbligatorio** prima di chiudere.
-  - se opzionale: pulsante "Aggiungi foto" facoltativo + "Segna come fatto".
-  - upload foto su `task-foto/{userId}/{taskId}.jpg`, poi `update task_assegnati set completato_at=now(), foto_url=...`.
-  - se già completato: mostra foto allegata (se esiste) e timestamp, con possibilità di "Riapri".
+### Aspetti tecnici
 
-### UI manager — `src/routes/manager.tasks.tsx`
-- Nel form template: nuovo `Switch` "Richiede foto a fine task".
-- Sezione "Task di oggi": nuova card che lista task assegnati del giorno con stato + thumbnail foto (se presente, click per ingrandire). Permette di filtrare per dipendente.
+- `timbrature-foto` bucket esiste già (privato). Le RLS attuali permettono al dipendente di caricare nella propria cartella. Per la pagina "Timbra per" il manager carica nella cartella del dipendente target → serve aggiornare la policy storage del bucket per consentire `INSERT` ai manager su qualsiasi path. Migrazione dedicata.
+- Nessuna nuova tabella richiesta. La tabella `timbrature_correzioni` esiste già con RLS adeguate.
+- Nessuna modifica al trigger `restrict_dipendente_timbrature_update` (continua a impedire modifiche manuali).
 
-### Componenti
-- Nuovo `src/components/task-dettaglio-dialog.tsx` riutilizzabile (riceve task + flag richiede_foto, gestisce upload e completamento).
+### File toccati
 
-## 3. File toccati
-
-**Creati**: `dipendente-sidebar.tsx`, `task-dettaglio-dialog.tsx`, `api/public/hooks/task-reminder.ts`, migration SQL.
-
-**Modificati**: `dipendente.tsx`, `dipendente.tasks.tsx`, `manager.tasks.tsx`, `notifiche-bell.tsx` (icona per tipo `task`).
-
-**Eliminati**: `dipendente-bottom-nav.tsx`.
-
-## Note tecniche
-- Il FAB timbra (`TimbraFAB`) è già responsive e non interferisce con la sidebar.
-- Sidebar usa `collapsible="offcanvas"` di default → su mobile è un drawer che scompare completamente, su desktop si può collassare a icone.
-- Le notifiche sfruttano la tabella `notifiche` già esistente e il `NotificheBell` già montato nell'header.
-- La foto è obbligatoria solo quando il template ha `richiede_foto=true`; il pulsante "Completa" resta disabilitato finché non viene scattata.
+- `src/components/dipendente-sidebar.tsx` — nuova voce
+- `src/components/manager-sidebar.tsx` — verifica voce "Timbra per" / "Correzioni"
+- `src/routes/dipendente.correzioni.tsx` — nuova pagina
+- `src/hooks/use-timbratura.ts` — foto obbligatoria
+- `src/components/timbra-fab.tsx` — gestione cancellazione picker
+- `src/routes/manager.timbra-per.tsx` — accesso a tutti i manager, multi-sessione, foto obbligatoria, include manager nella lista
+- Migrazione SQL: policy storage `timbrature-foto` per consentire INSERT ai manager su qualsiasi cartella
