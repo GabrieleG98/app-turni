@@ -33,6 +33,8 @@ export function TimbraFAB() {
       ? `Disponibile dalle ${turnoOggi.ora_inizio.slice(0, 5)} (5 min prima)`
       : windowState === "missed"
       ? "Turno passato — chiedi una correzione al manager"
+      : !turnoOggi && windowState === "available"
+      ? "Timbratura libera (nessun turno schedulato)"
       : "";
 
   const button = (
