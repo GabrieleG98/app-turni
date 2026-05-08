@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.restrict_dipendente_timbrature_update() FROM PUBLIC, anon, authenticated;

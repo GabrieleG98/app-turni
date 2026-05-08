@@ -50,6 +50,50 @@ export type Database = {
         }
         Relationships: []
       }
+      pause: {
+        Row: {
+          created_at: string
+          dipendente_id: string
+          fine: string | null
+          id: string
+          inizio: string
+          note: string | null
+          timbratura_id: string
+          tipo: Database["public"]["Enums"]["pausa_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dipendente_id: string
+          fine?: string | null
+          id?: string
+          inizio?: string
+          note?: string | null
+          timbratura_id: string
+          tipo?: Database["public"]["Enums"]["pausa_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dipendente_id?: string
+          fine?: string | null
+          id?: string
+          inizio?: string
+          note?: string | null
+          timbratura_id?: string
+          tipo?: Database["public"]["Enums"]["pausa_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pause_timbratura_id_fkey"
+            columns: ["timbratura_id"]
+            isOneToOne: false
+            referencedRelation: "timbrature"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cognome: string
@@ -88,7 +132,13 @@ export type Database = {
           created_at: string
           data: string
           dipendente_id: string
+          foto_in_url: string | null
+          foto_out_url: string | null
           id: string
+          lat_in: number | null
+          lat_out: number | null
+          lng_in: number | null
+          lng_out: number | null
           note: string | null
           orario_clock_in: string
           orario_clock_out: string | null
@@ -98,7 +148,13 @@ export type Database = {
           created_at?: string
           data: string
           dipendente_id: string
+          foto_in_url?: string | null
+          foto_out_url?: string | null
           id?: string
+          lat_in?: number | null
+          lat_out?: number | null
+          lng_in?: number | null
+          lng_out?: number | null
           note?: string | null
           orario_clock_in: string
           orario_clock_out?: string | null
@@ -108,7 +164,13 @@ export type Database = {
           created_at?: string
           data?: string
           dipendente_id?: string
+          foto_in_url?: string | null
+          foto_out_url?: string | null
           id?: string
+          lat_in?: number | null
+          lat_out?: number | null
+          lng_in?: number | null
+          lng_out?: number | null
           note?: string | null
           orario_clock_in?: string
           orario_clock_out?: string | null
@@ -288,6 +350,7 @@ export type Database = {
     Enums: {
       app_role: "manager" | "dipendente"
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
+      pausa_tipo: "pranzo" | "caffe" | "altro"
       swap_status: "pending" | "approved" | "rejected" | "cancelled"
       tipo_turno: "mattina" | "pomeriggio" | "sera"
     }
@@ -419,6 +482,7 @@ export const Constants = {
     Enums: {
       app_role: ["manager", "dipendente"],
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
+      pausa_tipo: ["pranzo", "caffe", "altro"],
       swap_status: ["pending", "approved", "rejected", "cancelled"],
       tipo_turno: ["mattina", "pomeriggio", "sera"],
     },
