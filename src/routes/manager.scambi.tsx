@@ -57,12 +57,14 @@ function ScambiPage() {
 
   const decidi = async (id: string, decisione: "approved" | "rejected", swap: SwapRow) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const updates: Record<string, unknown> = {
-      status: decisione,
-      decisione_di: user?.id,
-      decisione_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from("turno_swap_requests").update(updates).eq("id", id);
+    const { error } = await supabase
+      .from("turno_swap_requests")
+      .update({
+        status: decisione,
+        decisione_di: user?.id,
+        decisione_at: new Date().toISOString(),
+      })
+      .eq("id", id);
     if (error) {
       toast.error("Errore", { description: error.message });
       return;
