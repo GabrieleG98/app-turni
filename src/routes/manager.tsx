@@ -28,15 +28,16 @@ function ManagerLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <ManagerSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-12 border-b flex items-center px-3 bg-background sticky top-0 z-10 gap-2">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-12 border-b flex items-center px-2 sm:px-3 bg-background sticky top-0 z-10 gap-2">
             <SidebarTrigger />
+            <div className="font-semibold text-sm truncate">Manager</div>
             <div className="ml-auto flex items-center gap-1">
               <NotificheBell />
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 bg-muted/20">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 bg-muted/20 overflow-x-hidden">
             <Outlet />
           </main>
         </div>

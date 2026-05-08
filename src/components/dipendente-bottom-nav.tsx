@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, MessageCircle, ListChecks, User, Home, Play, Square, Clock } from "lucide-react";
+import { CalendarDays, MessageCircle, ListChecks, User, Home, Play, Square, Clock, RotateCw } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useTimbratura } from "@/hooks/use-timbratura";
 import { fmtRitardo } from "@/lib/timbra-window";
+import { TimbraConfermaDialog } from "@/components/timbra-conferma-dialog";
 
 const items = [
   { to: "/dipendente", label: "Oggi", icon: Home },
@@ -15,11 +16,22 @@ const items = [
 
 export function DipendenteBottomNav() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { inTurno, completato, busy, clockIn, clockOut, windowState, minutiRitardo, canClock } = useTimbratura();
+  const {
+    inTurno,
+    haGiaSessioni,
+    busy,
+    clockIn,
+    clockOut,
+    windowState,
+    minutiRitardo,
+    canClock,
+    conferma,
+    closeConferma,
+  } = useTimbratura();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleTimbra = () => {
-    if (!canClock || completato) return;
+    if (!canClock) return;
     fileRef.current?.click();
   };
 
@@ -31,7 +43,15 @@ export function DipendenteBottomNav() {
   };
 
   const isLate = !inTurno && windowState === "late";
-  const disabled = busy || !canClock || completato;
+  const disabled = busy || !canClock;
+  const Icon = inTurno
+    ? Square
+    : haGiaSessioni
+    ? RotateCw
+    : windowState === "too-early" || windowState === "no-shift"
+    ? Clock
+    : Play;
+  const label = inTurno ? "Stop" : haGiaSessioni ? "Nuova" : "Timbra";
 
   return (
     <>
@@ -67,18 +87,10 @@ export function DipendenteBottomNav() {
                     ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-destructive/40 animate-pulse"
                     : "bg-brand-gradient text-brand-foreground hover:opacity-95 shadow-brand/30",
                 )}
-                aria-label={completato ? "Turno completato" : inTurno ? "Termina turno" : "Inizia turno"}
+                aria-label={inTurno ? "Termina sessione" : "Inizia sessione"}
               >
-                {completato ? (
-                  <span className="text-[10px] font-medium">✓</span>
-                ) : inTurno ? (
-                  <Square className="h-5 w-5 fill-current" />
-                ) : windowState === "too-early" || windowState === "no-shift" ? (
-                  <Clock className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5 fill-current" />
-                )}
-                <span className="mt-0.5">{completato ? "OK" : inTurno ? "Stop" : "Timbra"}</span>
+                <Icon className={cn("h-5 w-5", (inTurno || (!haGiaSessioni && windowState !== "too-early" && windowState !== "no-shift")) && "fill-current")} />
+                <span className="mt-0.5">{label}</span>
                 {isLate && <span className="text-[9px] font-bold">{fmtRitardo(minutiRitardo)}</span>}
               </button>
             </li>
@@ -88,6 +100,7 @@ export function DipendenteBottomNav() {
           </ul>
         </div>
       </nav>
+      <TimbraConfermaDialog data={conferma} onClose={closeConferma} />
     </>
   );
 }

@@ -125,15 +125,15 @@ function Dashboard() {
         </div>
       </Card>
 
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Dipendente</TableHead>
-              <TableHead>Reparto</TableHead>
-              <TableHead className="text-right">Ore pianificate</TableHead>
-              <TableHead className="text-right">Ore lavorate</TableHead>
-              <TableHead className="text-right">Differenza</TableHead>
+              <TableHead className="hidden sm:table-cell">Reparto</TableHead>
+              <TableHead className="text-right hidden sm:table-cell">Ore pianificate</TableHead>
+              <TableHead className="text-right">Lavorate</TableHead>
+              <TableHead className="text-right">Diff.</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -154,9 +154,10 @@ function Dashboard() {
                     >
                       {p.nome} {p.cognome}
                     </Link>
+                    <div className="text-xs text-muted-foreground sm:hidden">{p.reparto || "—"} · pian. {fmtOre(oreP)}</div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.reparto || "—"}</TableCell>
-                  <TableCell className="text-right">{fmtOre(oreP)}</TableCell>
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">{p.reparto || "—"}</TableCell>
+                  <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
                   <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
                   <TableCell className="text-right">
                     {Math.abs(diff) < 0.05 ? (

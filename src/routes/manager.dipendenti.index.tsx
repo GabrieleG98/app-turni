@@ -107,14 +107,14 @@ function ListaDipendenti() {
         </Button>
       </Card>
 
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Permesso</TableHead>
-              <TableHead>Ruolo</TableHead>
-              <TableHead>Reparto</TableHead>
+              <TableHead className="hidden md:table-cell">Ruolo</TableHead>
+              <TableHead className="hidden md:table-cell">Reparto</TableHead>
               <TableHead className="text-right">Azione</TableHead>
             </TableRow>
           </TableHeader>
@@ -147,8 +147,8 @@ function ListaDipendenti() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{p.ruolo_lavoro || "—"}</TableCell>
-                  <TableCell>{p.reparto || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell">{p.ruolo_lavoro || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell">{p.reparto || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1.5 flex-wrap">
                       {manager ? (
