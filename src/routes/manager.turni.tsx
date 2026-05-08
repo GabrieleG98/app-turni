@@ -393,12 +393,18 @@ function GestioneTurni() {
               <th className="text-left p-3 font-medium sticky left-0 bg-muted/40 min-w-[180px]">
                 Dipendente
               </th>
-              {giorni.map((g, i) => (
-                <th key={i} className="p-2 text-center font-medium min-w-[140px]">
-                  <div>{GIORNI[i]}</div>
-                  <div className="text-xs text-muted-foreground">{format(g, "dd/MM")}</div>
-                </th>
-              ))}
+              {giorni.map((g, i) => {
+                const oggi = isoData(g) === isoData(new Date());
+                return (
+                  <th
+                    key={i}
+                    className={`p-2 text-center font-medium min-w-[140px] ${oggi ? "bg-brand text-brand-foreground rounded-md" : ""}`}
+                  >
+                    <div>{GIORNI[i]}</div>
+                    <div className={`text-xs ${oggi ? "text-brand-foreground/80" : "text-muted-foreground"}`}>{format(g, "dd/MM")}</div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
