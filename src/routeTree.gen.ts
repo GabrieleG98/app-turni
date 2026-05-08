@@ -23,6 +23,7 @@ import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
 import { Route as ManagerProfiloRouteImport } from './routes/manager.profilo'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
+import { Route as ManagerCorrezioniRouteImport } from './routes/manager.correzioni'
 import { Route as ManagerChatRouteImport } from './routes/manager.chat'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
@@ -102,6 +103,11 @@ const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ManagerCorrezioniRoute = ManagerCorrezioniRouteImport.update({
+  id: '/correzioni',
+  path: '/correzioni',
+  getParentRoute: () => ManagerRoute,
+} as any)
 const ManagerChatRoute = ManagerChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/dipendente/tasks'
     | '/dipendente/turni'
     | '/manager/chat'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/dipendente/tasks'
     | '/dipendente/turni'
     | '/manager/chat'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/dipendente/tasks'
     | '/dipendente/turni'
     | '/manager/chat'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -399,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDashboardRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/correzioni': {
+      id: '/manager/correzioni'
+      path: '/correzioni'
+      fullPath: '/manager/correzioni'
+      preLoaderRoute: typeof ManagerCorrezioniRouteImport
+      parentRoute: typeof ManagerRoute
+    }
     '/manager/chat': {
       id: '/manager/chat'
       path: '/chat'
@@ -482,6 +501,7 @@ const DipendenteRouteWithChildren = DipendenteRoute._addFileChildren(
 
 interface ManagerRouteChildren {
   ManagerChatRoute: typeof ManagerChatRoute
+  ManagerCorrezioniRoute: typeof ManagerCorrezioniRoute
   ManagerDashboardRoute: typeof ManagerDashboardRoute
   ManagerProfiloRoute: typeof ManagerProfiloRoute
   ManagerReportRoute: typeof ManagerReportRoute
@@ -494,6 +514,7 @@ interface ManagerRouteChildren {
 
 const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerChatRoute: ManagerChatRoute,
+  ManagerCorrezioniRoute: ManagerCorrezioniRoute,
   ManagerDashboardRoute: ManagerDashboardRoute,
   ManagerProfiloRoute: ManagerProfiloRoute,
   ManagerReportRoute: ManagerReportRoute,
@@ -519,3 +540,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
