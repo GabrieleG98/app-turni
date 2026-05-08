@@ -31,6 +31,12 @@ const items = [
 export function ManagerSidebar() {
   const { signOut, profile } = useAuth();
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const { setOpenMobile, setOpen } = useSidebar();
+  const isMobile = useIsMobile();
+  const closeSidebar = () => {
+    if (isMobile) setOpenMobile(false);
+    else setOpen(false);
+  };
 
   return (
     <Sidebar collapsible="icon">
