@@ -86,6 +86,10 @@ export function useTimbratura() {
 
   const clockIn = useCallback(async (file: File | null) => {
     if (!user) return;
+    if (!file) {
+      toast.error("Foto richiesta", { description: "Scatta un selfie per timbrare l'entrata" });
+      return;
+    }
     if (sessioneAttiva) {
       toast.error("Hai una sessione già aperta");
       return;
@@ -93,8 +97,7 @@ export function useTimbratura() {
     setBusy(true);
     try {
       const coords = await getCurrentPosition();
-      let foto_in_url: string | null = null;
-      if (file) foto_in_url = await uploadSelfie(user.id, file, "in");
+      const foto_in_url = await uploadSelfie(user.id, file, "in");
       const orario = new Date();
       const { error } = await supabase.from("timbrature").insert({
         dipendente_id: user.id,
@@ -125,6 +128,10 @@ export function useTimbratura() {
       toast.error("Nessuna sessione aperta");
       return;
     }
+    if (!file) {
+      toast.error("Foto richiesta", { description: "Scatta un selfie per timbrare l'uscita" });
+      return;
+    }
     if (pausaAperta) {
       toast.error("Chiudi prima la pausa in corso");
       return;
@@ -132,8 +139,7 @@ export function useTimbratura() {
     setBusy(true);
     try {
       const coords = await getCurrentPosition();
-      let foto_out_url: string | null = null;
-      if (file && user) foto_out_url = await uploadSelfie(user.id, file, "out");
+      const foto_out_url = user ? await uploadSelfie(user.id, file, "out") : null;
       const orario = new Date();
       const { error } = await supabase
         .from("timbrature")

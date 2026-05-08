@@ -30,6 +30,7 @@ import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
 import { Route as DipendenteProfiloRouteImport } from './routes/dipendente.profilo'
 import { Route as DipendenteDisponibilitaRouteImport } from './routes/dipendente.disponibilita'
+import { Route as DipendenteCorrezioniRouteImport } from './routes/dipendente.correzioni'
 import { Route as DipendenteChatRouteImport } from './routes/dipendente.chat'
 import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
 import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
@@ -140,6 +141,11 @@ const DipendenteDisponibilitaRoute = DipendenteDisponibilitaRouteImport.update({
   path: '/disponibilita',
   getParentRoute: () => DipendenteRoute,
 } as any)
+const DipendenteCorrezioniRoute = DipendenteCorrezioniRouteImport.update({
+  id: '/correzioni',
+  path: '/correzioni',
+  getParentRoute: () => DipendenteRoute,
+} as any)
 const DipendenteChatRoute = DipendenteChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
+  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
+  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
+  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
+    | '/dipendente/correzioni'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
+    | '/dipendente/correzioni'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
+    | '/dipendente/correzioni'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
@@ -486,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DipendenteDisponibilitaRouteImport
       parentRoute: typeof DipendenteRoute
     }
+    '/dipendente/correzioni': {
+      id: '/dipendente/correzioni'
+      path: '/correzioni'
+      fullPath: '/dipendente/correzioni'
+      preLoaderRoute: typeof DipendenteCorrezioniRouteImport
+      parentRoute: typeof DipendenteRoute
+    }
     '/dipendente/chat': {
       id: '/dipendente/chat'
       path: '/chat'
@@ -519,6 +538,7 @@ declare module '@tanstack/react-router' {
 
 interface DipendenteRouteChildren {
   DipendenteChatRoute: typeof DipendenteChatRoute
+  DipendenteCorrezioniRoute: typeof DipendenteCorrezioniRoute
   DipendenteDisponibilitaRoute: typeof DipendenteDisponibilitaRoute
   DipendenteProfiloRoute: typeof DipendenteProfiloRoute
   DipendenteTasksRoute: typeof DipendenteTasksRoute
@@ -528,6 +548,7 @@ interface DipendenteRouteChildren {
 
 const DipendenteRouteChildren: DipendenteRouteChildren = {
   DipendenteChatRoute: DipendenteChatRoute,
+  DipendenteCorrezioniRoute: DipendenteCorrezioniRoute,
   DipendenteDisponibilitaRoute: DipendenteDisponibilitaRoute,
   DipendenteProfiloRoute: DipendenteProfiloRoute,
   DipendenteTasksRoute: DipendenteTasksRoute,
@@ -583,3 +604,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
