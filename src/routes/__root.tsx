@@ -56,12 +56,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#16a34a" },
+      { name: "theme-color", content: "#1e2a44" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "apple-mobile-web-app-title", content: "Turni Resort" },
-      { title: "Turni Resort — Gestione turni e timbrature" },
-      { name: "description", content: "Gestione turni, timbrature, chat e checklist per il team del resort." },
+      { name: "apple-mobile-web-app-title", content: "Timi Ama" },
+      { title: "Schedule Timi Ama 4Fun — Turni e timbrature" },
+      { name: "description", content: "Schedule turni, timbrature, chat e checklist per il team Timi Ama 4Fun." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

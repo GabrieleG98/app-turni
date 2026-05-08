@@ -1,13 +1,13 @@
 {
-  "name": "Turni Resort",
-  "short_name": "Turni",
-  "description": "Gestione turni, timbrature e team del tuo resort.",
+  "name": "Schedule Timi Ama 4Fun",
+  "short_name": "Timi Ama",
+  "description": "Schedule turni, timbrature e team Timi Ama 4Fun.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#16a34a",
+  "theme_color": "#1e2a44",
   "lang": "it",
   "icons": [
     {
