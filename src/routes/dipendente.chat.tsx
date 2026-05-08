@@ -7,8 +7,8 @@ export const Route = createFileRoute("/dipendente/chat")({
 });
 
 function Chat() {
-  const { roles } = useAuth();
-  const isManager = roles?.includes("manager") ?? false;
+  const { role } = useAuth();
+  const isManager = role === "manager";
   return (
     <>
       <header className="bg-brand-gradient text-brand-foreground rounded-b-3xl">
