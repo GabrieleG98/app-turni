@@ -120,19 +120,6 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
     }
   };
 
-  const [fotoSalvataUrl, setFotoSalvataUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let active = true;
-    if (task?.foto_url) {
-      supabase.storage.from("task-foto").createSignedUrl(task.foto_url, 3600).then(({ data }) => {
-        if (active && data?.signedUrl) setFotoSalvataUrl(data.signedUrl);
-      });
-    } else {
-      setFotoSalvataUrl(null);
-    }
-    return () => { active = false; };
-  }, [task?.foto_url]);
-
   return (
     <Dialog open={!!task} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
       <DialogContent className="max-w-md">
