@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Route as RegistratiRoute } from "./registrati";
+import { SignupForm } from "@/components/signup-form";
 
 export const Route = createFileRoute("/unisciti-4fun")({
-  component: RegistratiRoute.options.component!,
+  component: SignupForm,
 });
