@@ -143,6 +143,9 @@ function Report() {
     toast.success("Report Excel esportato");
   };
 
+  const { user } = useAuth();
+  const mia = righe.find((r) => r.p.id === user?.id);
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
@@ -161,6 +164,32 @@ function Report() {
           <FileSpreadsheet className="h-4 w-4 mr-2" /> Esporta Excel
         </Button>
       </Card>
+
+      {mia && (
+        <Card className="p-4 border-brand/40 bg-brand/5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-xs uppercase font-semibold text-brand">Le mie ore</div>
+              <div className="text-sm text-muted-foreground">{mia.p.nome} {mia.p.cognome} · settimana corrente</div>
+            </div>
+            <div className="flex items-center gap-4 text-sm flex-wrap">
+              <div><span className="text-muted-foreground">Pianificate:</span> <span className="font-semibold">{fmtOre(mia.oreP)}</span></div>
+              <div><span className="text-muted-foreground">Lavorate:</span> <span className="font-semibold">{fmtOre(mia.oreE)}</span></div>
+              <div><span className="text-muted-foreground">Straord.:</span> <span className="font-semibold">{fmtOre(mia.straord)}</span></div>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Differenza:</span>
+                {Math.abs(mia.diff) < 0.05 ? (
+                  <Badge variant="secondary">in pari</Badge>
+                ) : mia.diff > 0 ? (
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600">+{fmtOre(mia.diff)}</Badge>
+                ) : (
+                  <Badge variant="destructive">{fmtOre(mia.diff)}</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
       <Card>
         <Table>
           <TableHeader>
