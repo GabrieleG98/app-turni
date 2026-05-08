@@ -14,16 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          cognome: string
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          reparto: string
+          ruolo_lavoro: string
+          updated_at: string
+        }
+        Insert: {
+          cognome?: string
+          created_at?: string
+          email?: string | null
+          id: string
+          nome?: string
+          reparto?: string
+          ruolo_lavoro?: string
+          updated_at?: string
+        }
+        Update: {
+          cognome?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          reparto?: string
+          ruolo_lavoro?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      timbrature: {
+        Row: {
+          created_at: string
+          data: string
+          dipendente_id: string
+          id: string
+          note: string | null
+          orario_clock_in: string
+          orario_clock_out: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          dipendente_id: string
+          id?: string
+          note?: string | null
+          orario_clock_in: string
+          orario_clock_out?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          dipendente_id?: string
+          id?: string
+          note?: string | null
+          orario_clock_in?: string
+          orario_clock_out?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timbrature_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turni: {
+        Row: {
+          created_at: string
+          data: string
+          dipendente_id: string
+          id: string
+          location: string
+          note: string | null
+          ora_fine: string
+          ora_inizio: string
+          tipo_turno: Database["public"]["Enums"]["tipo_turno"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          dipendente_id: string
+          id?: string
+          location?: string
+          note?: string | null
+          ora_fine: string
+          ora_inizio: string
+          tipo_turno: Database["public"]["Enums"]["tipo_turno"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          dipendente_id?: string
+          id?: string
+          location?: string
+          note?: string | null
+          ora_fine?: string
+          ora_inizio?: string
+          tipo_turno?: Database["public"]["Enums"]["tipo_turno"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turni_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "manager" | "dipendente"
+      tipo_turno: "mattina" | "pomeriggio" | "sera"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +298,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["manager", "dipendente"],
+      tipo_turno: ["mattina", "pomeriggio", "sera"],
+    },
   },
 } as const
