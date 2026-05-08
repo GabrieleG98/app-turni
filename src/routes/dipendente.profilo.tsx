@@ -2,14 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Briefcase, Building2, Mail, CalendarClock, ChevronRight } from "lucide-react";
+import { ProfiloEditor } from "@/components/profilo-editor";
+import { LogOut, User as UserIcon, CalendarClock, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/dipendente/profilo")({
   component: Profilo,
 });
 
 function Profilo() {
-  const { profile, signOut, user } = useAuth();
+  const { profile, signOut } = useAuth();
   const iniziali = `${profile?.nome?.[0] ?? ""}${profile?.cognome?.[0] ?? ""}`.toUpperCase();
 
   return (
@@ -25,12 +26,8 @@ function Profilo() {
           <p className="text-sm opacity-90">{profile?.ruolo_lavoro}</p>
         </div>
       </header>
-      <main className="max-w-md mx-auto px-4 -mt-6 space-y-3">
-        <Card className="border-0 shadow-sm divide-y">
-          <Riga icon={<Mail className="h-4 w-4" />} label="Email" value={user?.email ?? "—"} />
-          <Riga icon={<Briefcase className="h-4 w-4" />} label="Ruolo" value={profile?.ruolo_lavoro || "—"} />
-          <Riga icon={<Building2 className="h-4 w-4" />} label="Reparto" value={profile?.reparto || "—"} />
-        </Card>
+      <main className="max-w-md mx-auto px-4 -mt-6 space-y-3 pb-6">
+        <ProfiloEditor />
         <Link to="/dipendente/disponibilita" className="block">
           <Card className="border-0 shadow-sm flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
@@ -43,17 +40,5 @@ function Profilo() {
         </Button>
       </main>
     </>
-  );
-}
-
-function Riga({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="text-muted-foreground">{icon}</div>
-      <div className="flex-1">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-sm font-medium">{value}</div>
-      </div>
-    </div>
   );
 }
