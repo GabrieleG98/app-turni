@@ -50,7 +50,7 @@ function Report() {
     const oreP = turni.filter((t) => t.dipendente_id === p.id)
       .reduce((s, t) => s + oreTraOrari(t.ora_inizio, t.ora_fine, t.data), 0);
     const minPause = pause.filter((x) => x.dipendente_id === p.id && x.fine)
-      .reduce((s, x) => s + (new Date(x.fine).getTime() - new Date(x.inizio).getTime()) / 60000, 0);
+      .reduce((s, x) => s + (new Date(x.fine!).getTime() - new Date(x.inizio).getTime()) / 60000, 0);
     const oreLordo = timbrature.filter((t) => t.dipendente_id === p.id)
       .reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
     const oreE = Math.max(0, oreLordo - minPause / 60);
