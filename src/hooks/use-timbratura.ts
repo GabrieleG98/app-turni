@@ -1,16 +1,39 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { isoData } from "@/lib/date-utils";
 import { getCurrentPosition, uploadSelfie } from "@/lib/timbrature-utils";
+import { computeWindow, type WindowState } from "@/lib/timbra-window";
 import { toast } from "sonner";
 
 export function useTimbratura() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const oggi = isoData(new Date());
+
+  // tick ogni 30s per aggiornare la finestra/ritardo
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { data: turnoOggi } = useQuery({
+    enabled: !!user,
+    queryKey: ["mio-turno-oggi", oggi, user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("turni")
+        .select("*")
+        .eq("dipendente_id", user!.id)
+        .eq("data", oggi)
+        .eq("pubblicato", true)
+        .maybeSingle();
+      return data;
+    },
+  });
 
   const { data: timbOggi } = useQuery({
     enabled: !!user,
@@ -42,6 +65,16 @@ export function useTimbratura() {
   const inTurno = !!timbOggi && !timbOggi.orario_clock_out;
   const completato = !!timbOggi?.orario_clock_out;
 
+  const win = computeWindow(turnoOggi, now);
+  // Se sono già in turno, il bottone serve a fare clock-out → sempre disponibile.
+  const canClock: boolean = inTurno
+    ? true
+    : completato
+    ? false
+    : win.state === "available" || win.state === "late";
+  const windowState: WindowState = win.state;
+  const minutiRitardo = win.minutiRitardo;
+
   const clockIn = async (file: File | null) => {
     if (!user) return;
     if (timbOggi) {
@@ -62,7 +95,7 @@ export function useTimbratura() {
         foto_in_url,
       });
       if (error) throw error;
-      toast.success("Turno iniziato 🎉");
+      toast.success(minutiRitardo > 0 ? `Turno iniziato con ${minutiRitardo} min di ritardo` : "Turno iniziato 🎉");
       qc.invalidateQueries({ queryKey: ["timb-oggi"] });
     } catch (e: any) {
       toast.error("Errore", { description: e.message });
@@ -108,5 +141,18 @@ export function useTimbratura() {
     }
   };
 
-  return { timbOggi, pause, pausaAperta, inTurno, completato, busy, clockIn, clockOut };
+  return {
+    timbOggi,
+    pause,
+    pausaAperta,
+    inTurno,
+    completato,
+    busy,
+    clockIn,
+    clockOut,
+    turnoOggi,
+    windowState,
+    minutiRitardo,
+    canClock,
+  };
 }
