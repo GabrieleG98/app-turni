@@ -14,6 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_canali: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descrizione: string | null
+          id: string
+          nome: string
+          solo_manager_scrive: boolean
+          tipo: Database["public"]["Enums"]["chat_canale_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descrizione?: string | null
+          id?: string
+          nome: string
+          solo_manager_scrive?: boolean
+          tipo?: Database["public"]["Enums"]["chat_canale_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descrizione?: string | null
+          id?: string
+          nome?: string
+          solo_manager_scrive?: boolean
+          tipo?: Database["public"]["Enums"]["chat_canale_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_membri: {
+        Row: {
+          canale_id: string
+          created_at: string
+          id: string
+          ultimo_letto_at: string | null
+          user_id: string
+        }
+        Insert: {
+          canale_id: string
+          created_at?: string
+          id?: string
+          ultimo_letto_at?: string | null
+          user_id: string
+        }
+        Update: {
+          canale_id?: string
+          created_at?: string
+          id?: string
+          ultimo_letto_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_membri_canale_id_fkey"
+            columns: ["canale_id"]
+            isOneToOne: false
+            referencedRelation: "chat_canali"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messaggi: {
+        Row: {
+          autore_id: string
+          canale_id: string
+          contenuto: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          autore_id: string
+          canale_id: string
+          contenuto: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          autore_id?: string
+          canale_id?: string
+          contenuto?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messaggi_canale_id_fkey"
+            columns: ["canale_id"]
+            isOneToOne: false
+            referencedRelation: "chat_canali"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disponibilita: {
         Row: {
           created_at: string
@@ -346,9 +443,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_membro_canale: {
+        Args: { _canale: string; _user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "manager" | "dipendente"
+      chat_canale_tipo: "generale" | "annunci" | "reparto" | "privato"
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
       pausa_tipo: "pranzo" | "caffe" | "altro"
       swap_status: "pending" | "approved" | "rejected" | "cancelled"
@@ -481,6 +583,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["manager", "dipendente"],
+      chat_canale_tipo: ["generale", "annunci", "reparto", "privato"],
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
       pausa_tipo: ["pranzo", "caffe", "altro"],
       swap_status: ["pending", "approved", "rejected", "cancelled"],
