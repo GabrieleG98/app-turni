@@ -320,27 +320,45 @@ function HomeOggi() {
             }}
           />
 
-          {!inTurno && !timbOggi?.orario_clock_out && (
-            <Button
-              size="lg"
-              className="h-20 text-lg rounded-2xl bg-brand-gradient text-brand-foreground hover:opacity-95 shadow-lg shadow-brand/30"
-              onClick={() => fileInRef.current?.click()}
-              disabled={busy}
-            >
-              <Play className="h-6 w-6 mr-2 fill-current" /> Inizio turno
-            </Button>
-          )}
-          {inTurno && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-20 text-lg rounded-2xl border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={() => fileOutRef.current?.click()}
-              disabled={busy || !!pausaAperta}
-            >
-              <Square className="h-6 w-6 mr-2 fill-current" /> Fine turno
-            </Button>
-          )}
+          {(() => {
+            const win = computeWindow(turnoOggi);
+            const canIn = !inTurno && !timbOggi?.orario_clock_out && (win.state === "available" || win.state === "late");
+            const isLate = win.state === "late" && !inTurno;
+            return (
+              <>
+                {!inTurno && !timbOggi?.orario_clock_out && (
+                  <Button
+                    size="lg"
+                    className={`h-20 text-lg rounded-2xl shadow-lg ${isLate ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-brand-gradient text-brand-foreground hover:opacity-95 shadow-brand/30"}`}
+                    onClick={() => fileInRef.current?.click()}
+                    disabled={busy || !canIn}
+                  >
+                    {win.state === "too-early" || win.state === "no-shift" ? <Clock className="h-6 w-6 mr-2" /> : <Play className="h-6 w-6 mr-2 fill-current" />}
+                    {win.state === "no-shift"
+                      ? "Nessun turno oggi"
+                      : win.state === "too-early"
+                      ? `Disponibile alle ${turnoOggi?.ora_inizio.slice(0, 5)}`
+                      : isLate
+                      ? `Inizio turno · in ritardo ${fmtRitardo(win.minutiRitardo)}`
+                      : win.state === "missed"
+                      ? "Turno passato"
+                      : "Inizio turno"}
+                  </Button>
+                )}
+                {inTurno && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-20 text-lg rounded-2xl border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => fileOutRef.current?.click()}
+                    disabled={busy || !!pausaAperta}
+                  >
+                    <Square className="h-6 w-6 mr-2 fill-current" /> Fine turno
+                  </Button>
+                )}
+              </>
+            );
+          })()}
           {!inTurno && (
             <p className="text-[11px] text-center text-muted-foreground px-4">
               Verranno richiesti posizione GPS e selfie per validare la timbratura.
@@ -351,8 +369,12 @@ function HomeOggi() {
               Turno di oggi completato. Buon riposo! 🎉
             </Card>
           )}
+          <Button variant="outline" size="sm" className="text-muted-foreground" onClick={() => setCorrOpen(true)}>
+            <AlertTriangle className="h-4 w-4 mr-2" /> Segnala errore timbratura
+          </Button>
         </div>
       </main>
+      <CorrezioneDialog open={corrOpen} onOpenChange={setCorrOpen} timbraturaId={timbOggi?.id ?? null} defaultDate={oggi} />
     </>
   );
 }
