@@ -18,6 +18,7 @@ interface AuthCtx {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  isOwner: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
