@@ -20,6 +20,7 @@ function HomeOggi() {
   const qc = useQueryClient();
   const { user, profile } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [corrOpen, setCorrOpen] = useState(false);
   const fileInRef = useRef<HTMLInputElement>(null);
   const fileOutRef = useRef<HTMLInputElement>(null);
 
