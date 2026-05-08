@@ -6,9 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { fmtData, isoData, oreTimbratura, fmtOre } from "@/lib/date-utils";
 import { getCurrentPosition, uploadSelfie, minutiPause, calcStraordinario } from "@/lib/timbrature-utils";
-import { Play, Square, Sparkles, Coffee, Pause as PauseIcon, MapPin, Camera } from "lucide-react";
+import { computeWindow, fmtRitardo } from "@/lib/timbra-window";
+import { Play, Square, Sparkles, Coffee, Pause as PauseIcon, MapPin, Camera, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useRef, useState } from "react";
+import { CorrezioneDialog } from "@/components/correzione-dialog";
 
 export const Route = createFileRoute("/dipendente/")({
   component: HomeOggi,
