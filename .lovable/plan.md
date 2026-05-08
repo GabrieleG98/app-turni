@@ -1,58 +1,33 @@
-## Risposta sulla chat
-Stato attuale dei canali:
-- **#Generale** — tutti (manager e dipendenti) leggono e scrivono liberamente.
-- **#Annunci** — tutti leggono, ma solo i manager possono scrivere (è pensato per comunicazioni ufficiali).
+## Profilo modificabile + owner gestisce ruolo/reparto
 
-Se vuoi che **anche su Annunci** scrivano tutti dimmelo e tolgo la restrizione. Altrimenti lascio com'è: è il comportamento standard di una bacheca aziendale.
+### 1. Profilo editabile (dipendenti + manager)
 
-## Proteggere te (proprietario) dalle retrocessioni
+**Componente condiviso `src/components/profilo-editor.tsx`**
+- Form con: Nome, Cognome, Ruolo lavoro, Reparto, Email
+- Validazione zod (lunghezze, email valida)
+- Salva: `supabase.from("profiles").update(...)` + `supabase.auth.updateUser({ email })` se email cambiata
+- Toast di conferma; avviso che il cambio email richiede conferma via mail
 
-### Obiettivo
-Tu, primo utente registrato (Gabriele Genna), devi risultare **intoccabile**: nessun altro manager può retrocederti, cambiarti ruolo, né eliminare il tuo profilo. Tu invece mantieni il pieno controllo su tutti gli altri.
+**`src/routes/dipendente.profilo.tsx`** — sostituire le righe di sola lettura con `<ProfiloEditor />`. Mantenere link Disponibilità ed Esci.
 
-### Identificazione del proprietario
-Il proprietario è il manager più "vecchio" — l'utente con il record `user_roles` di ruolo `manager` con `created_at` minimo. Con la funzione SECURITY DEFINER `is_owner(uid)` evitiamo qualunque rischio di ricorsione RLS.
+**Nuova `src/routes/manager.profilo.tsx`** — pagina con `<ProfiloEditor />` in stile manager.
 
-```sql
-create or replace function public.is_owner(_uid uuid)
-returns boolean language sql stable security definer set search_path=public as $$
-  select _uid = (
-    select user_id from public.user_roles
-    where role = 'manager'
-    order by created_at asc limit 1
-  );
-$$;
-```
+**`src/components/manager-sidebar.tsx`** — aggiungere voce "Profilo" (icona `UserCircle`) → `/manager/profilo`.
 
-### Modifiche
+### 2. Owner modifica ruolo/reparto di tutti
 
-**1. `set_user_role` — blocco operazioni sul proprietario**
-Aggiorno la funzione esistente: se `_user_id` è il proprietario e il chiamante NON è il proprietario, solleva eccezione "Non puoi modificare il ruolo del proprietario dell'app".
+**`src/routes/manager.dipendenti.$id.tsx`**
+- Calcolare `ownerId` (primo `user_roles` manager per `created_at`) e `iAmOwner`.
+- Aggiungere Card "Modifica dati lavorativi" visibile solo se `iAmOwner`, con due input (`ruolo_lavoro`, `reparto`) e pulsante Salva.
+- Update via `supabase.from("profiles").update(...).eq("id", id)` — le RLS attuali consentono già all'owner di modificare qualsiasi profilo, manager inclusi.
 
-**2. RLS su `user_roles`**
-Sostituisco la policy "Manager gestisce ruoli" (oggi un ALL aperto a tutti i manager) con due policy mirate:
-- INSERT/UPDATE/DELETE consentito ai manager **solo se la riga target non appartiene al proprietario**, oppure se il chiamante stesso è il proprietario.
-- SELECT invariato.
-
-Questo chiude anche la strada a un manager che provasse a eliminare direttamente la riga `user_roles` del proprietario bypassando l'RPC.
-
-**3. RLS su `profiles`**
-Le policy "Manager modifica profili" e "Manager elimina profili" diventano:
-- Update/Delete permessi ai manager **a meno che** il target sia il proprietario, salvo che il chiamante sia il proprietario stesso.
-Così nessuno può cancellare/modificare il tuo profilo all'insaputa.
-
-**4. UI — `src/routes/manager.dipendenti.index.tsx`**
-- Carico l'id del proprietario (una query: prima riga `user_roles` manager per `created_at`).
-- Sulla riga del proprietario:
-  - badge **"Proprietario"** (oltre a "Manager") con stile distintivo.
-  - pulsante "Retrocedi" **disabilitato** per chiunque non sia il proprietario, con tooltip "Solo il proprietario può modificare il proprio ruolo".
-- Mantengo invariata la regola: il proprietario non può retrocedere sé stesso (già prevista).
-
-### Cosa NON cambia
-- Flusso di registrazione: il primo utente continua a diventare manager automaticamente (= proprietario).
-- Permessi operativi degli altri manager su turni, timbrature, task, chat, scambi, report: invariati.
-- Nessun nuovo campo nel database: il proprietario è dedotto dinamicamente, niente flag manuali da gestire.
+### Dettagli tecnici
+- Nessuna migrazione DB: le policy `Manager modifica profili` e `Dipendente aggiorna proprio profilo` coprono tutti i casi.
+- Cambio email: usa flusso standard Supabase con conferma via email al nuovo indirizzo.
 
 ### File toccati
-- nuova migration: funzione `is_owner`, aggiornamento `set_user_role`, nuove policy RLS su `user_roles` e `profiles`.
-- `src/routes/manager.dipendenti.index.tsx`: badge e disabilitazione pulsante.
+- Nuovo: `src/components/profilo-editor.tsx`
+- Nuovo: `src/routes/manager.profilo.tsx`
+- Modificato: `src/routes/dipendente.profilo.tsx`
+- Modificato: `src/routes/manager.dipendenti.$id.tsx`
+- Modificato: `src/components/manager-sidebar.tsx`
