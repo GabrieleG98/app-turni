@@ -1,16 +1,26 @@
 import { useRef } from "react";
-import { Play, Square, Clock } from "lucide-react";
+import { Play, Square, Clock, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimbratura } from "@/hooks/use-timbratura";
 import { fmtRitardo } from "@/lib/timbra-window";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TimbraConfermaDialog } from "@/components/timbra-conferma-dialog";
 
 export function TimbraFAB() {
-  const { inTurno, completato, busy, clockIn, clockOut, windowState, minutiRitardo, canClock, turnoOggi } = useTimbratura();
+  const {
+    inTurno,
+    haGiaSessioni,
+    busy,
+    clockIn,
+    clockOut,
+    windowState,
+    minutiRitardo,
+    canClock,
+    turnoOggi,
+    conferma,
+    closeConferma,
+  } = useTimbratura();
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // Se completato → non mostriamo più il FAB
-  if (completato) return null;
 
   const handleClick = () => {
     if (!canClock) return;
@@ -34,8 +44,17 @@ export function TimbraFAB() {
       : windowState === "missed"
       ? "Turno passato — chiedi una correzione al manager"
       : !turnoOggi && windowState === "available"
-      ? "Timbratura libera (nessun turno schedulato)"
+      ? "Timbratura libera"
       : "";
+
+  const label = inTurno ? "Stop" : haGiaSessioni ? "Nuova" : "Timbra";
+  const Icon = inTurno
+    ? Square
+    : haGiaSessioni
+    ? RotateCw
+    : windowState === "too-early" || windowState === "no-shift"
+    ? Clock
+    : Play;
 
   const button = (
     <button
@@ -52,16 +71,10 @@ export function TimbraFAB() {
           ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-destructive/40 animate-pulse"
           : "bg-brand-gradient text-brand-foreground hover:opacity-95 shadow-brand/30",
       )}
-      aria-label={inTurno ? "Termina turno" : "Inizia turno"}
+      aria-label={inTurno ? "Termina sessione" : "Inizia sessione"}
     >
-      {inTurno ? (
-        <Square className="h-5 w-5 fill-current" />
-      ) : windowState === "too-early" || windowState === "no-shift" ? (
-        <Clock className="h-5 w-5" />
-      ) : (
-        <Play className="h-5 w-5 fill-current" />
-      )}
-      <span className="mt-0.5">{inTurno ? "Stop" : "Timbra"}</span>
+      <Icon className={cn("h-5 w-5", (inTurno || (!haGiaSessioni && windowState !== "too-early" && windowState !== "no-shift")) && "fill-current")} />
+      <span className="mt-0.5">{label}</span>
       {isLate && <span className="mt-0.5 font-bold">{fmtRitardo(minutiRitardo)}</span>}
     </button>
   );
@@ -86,6 +99,7 @@ export function TimbraFAB() {
       ) : (
         button
       )}
+      <TimbraConfermaDialog data={conferma} onClose={closeConferma} />
     </>
   );
 }
