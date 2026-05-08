@@ -74,6 +74,27 @@ function ManagerTasks() {
     },
   });
 
+  const oggi = isoData(new Date());
+  const { data: tasksOggi = [] } = useQuery({
+    queryKey: ["task-oggi-manager", oggi],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("task_assegnati")
+        .select("id, titolo, completato_at, foto_url, dipendente_id")
+        .eq("data", oggi)
+        .order("completato_at", { ascending: true, nullsFirst: true });
+      return data ?? [];
+    },
+  });
+
+  const [fotoOpen, setFotoOpen] = useState<string | null>(null);
+  const [fotoSignedUrl, setFotoSignedUrl] = useState<string | null>(null);
+  const apriFoto = async (path: string) => {
+    setFotoOpen(path);
+    const { data } = await supabase.storage.from("task-foto").createSignedUrl(path, 3600);
+    setFotoSignedUrl(data?.signedUrl ?? null);
+  };
+
   const reset = () => {
     setTitolo("");
     setDescrizione("");
