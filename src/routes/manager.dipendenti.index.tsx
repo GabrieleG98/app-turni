@@ -117,6 +117,8 @@ function ListaDipendenti() {
             ) : profili.map((p) => {
               const manager = isManager(p.id);
               const self = me === p.id;
+              const isOwner = ownerId === p.id;
+              const ownerLocked = isOwner && !iAmOwner;
               return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
@@ -125,11 +127,18 @@ function ListaDipendenti() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {manager ? (
-                      <Badge variant="default">Manager</Badge>
-                    ) : (
-                      <Badge variant="secondary">Dipendente</Badge>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {manager ? (
+                        <Badge variant="default">Manager</Badge>
+                      ) : (
+                        <Badge variant="secondary">Dipendente</Badge>
+                      )}
+                      {isOwner && (
+                        <Badge variant="outline" className="border-brand text-brand">
+                          Proprietario
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{p.ruolo_lavoro || "—"}</TableCell>
                   <TableCell>{p.reparto || "—"}</TableCell>
@@ -138,8 +147,14 @@ function ListaDipendenti() {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={self}
-                        title={self ? "Non puoi retrocedere te stesso" : undefined}
+                        disabled={self || ownerLocked}
+                        title={
+                          ownerLocked
+                            ? "Solo il proprietario può modificare il proprio ruolo"
+                            : self
+                            ? "Non puoi retrocedere te stesso"
+                            : undefined
+                        }
                         onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: false })}
                       >
                         <ShieldOff className="h-4 w-4 mr-1.5" /> Retrocedi
