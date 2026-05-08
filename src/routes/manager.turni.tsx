@@ -200,9 +200,30 @@ function GestioneTurni() {
           <h1 className="text-2xl font-bold">Gestione turni</h1>
           <p className="text-sm text-muted-foreground">Vista settimanale</p>
         </div>
-        <Button variant="outline" onClick={() => setCopiaOpen(true)}>
-          <Copy className="h-4 w-4 mr-2" /> Copia settimana precedente
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={() => {
+              if (profili.length === 0) {
+                toast.info("Aggiungi prima un dipendente");
+                return;
+              }
+              setEditing({
+                dipendente_id: profili[0].id,
+                data: isoData(inizio),
+                ora_inizio: "09:00",
+                ora_fine: "13:00",
+                tipo_turno: "mattina",
+                location: "",
+                note: "",
+              });
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" /> Nuovo turno
+          </Button>
+          <Button variant="outline" onClick={() => setCopiaOpen(true)}>
+            <Copy className="h-4 w-4 mr-2" /> Copia settimana precedente
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 flex items-center gap-3">
