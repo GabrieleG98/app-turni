@@ -199,6 +199,15 @@ function ManagerTasks() {
                   <Input value={reparto} onChange={(e) => setReparto(e.target.value)} placeholder="Limita ad un reparto specifico" />
                 </div>
               )}
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <Label className="cursor-pointer">Richiede foto a fine task</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Il dipendente dovrà allegare una foto per chiudere il task.
+                  </p>
+                </div>
+                <Switch checked={richiedeFoto} onCheckedChange={setRichiedeFoto} />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Annulla</Button>
@@ -231,6 +240,7 @@ function ManagerTasks() {
                   <span>👤 {nomeDip(t.assegnato_a)}</span>
                   {t.reparto && <span>· 🏷️ {t.reparto}</span>}
                   <span>· 📅 {t.giorni_settimana.map((g: number) => GIORNI.find((x) => x.v === g)?.l).join(", ")}</span>
+                  {t.richiede_foto && <span>· 📸 foto richiesta</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
