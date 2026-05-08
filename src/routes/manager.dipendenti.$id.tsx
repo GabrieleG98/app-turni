@@ -102,7 +102,11 @@ function DettaglioDipendente() {
               <div className="text-xs text-muted-foreground">{GIORNI[i]}</div>
               <div className="text-sm font-medium mb-2">{fmtData(g, "dd/MM")}</div>
               {t ? (
-                <div className={`rounded-md p-2 text-xs bg-turno-${t.tipo_turno} text-turno-${t.tipo_turno}-foreground`}>
+                <div className={`rounded-md p-2 text-xs ${
+                  t.tipo_turno === "mattina" ? "bg-turno-mattina text-turno-mattina-foreground"
+                  : t.tipo_turno === "pomeriggio" ? "bg-turno-pomeriggio text-turno-pomeriggio-foreground"
+                  : "bg-turno-sera text-turno-sera-foreground"
+                }`}>
                   <div className="font-semibold capitalize">{t.tipo_turno}</div>
                   <div>{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
                   {t.location && <div className="opacity-80">{t.location}</div>}
