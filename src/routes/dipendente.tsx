@@ -2,6 +2,8 @@ import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 import { DipendenteBottomNav } from "@/components/dipendente-bottom-nav";
+import { NotificheBell } from "@/components/notifiche-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/dipendente")({
   component: DipendenteLayout,
