@@ -147,6 +147,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifiche: {
+        Row: {
+          created_at: string
+          descrizione: string | null
+          id: string
+          letto_at: string | null
+          link: string | null
+          tipo: Database["public"]["Enums"]["notifica_tipo"]
+          titolo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          letto_at?: string | null
+          link?: string | null
+          tipo?: Database["public"]["Enums"]["notifica_tipo"]
+          titolo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          letto_at?: string | null
+          link?: string | null
+          tipo?: Database["public"]["Enums"]["notifica_tipo"]
+          titolo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pause: {
         Row: {
           created_at: string
@@ -542,6 +575,7 @@ export type Database = {
       app_role: "manager" | "dipendente"
       chat_canale_tipo: "generale" | "annunci" | "reparto" | "privato"
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
+      notifica_tipo: "turno" | "scambio" | "annuncio" | "task" | "generico"
       pausa_tipo: "pranzo" | "caffe" | "altro"
       swap_status: "pending" | "approved" | "rejected" | "cancelled"
       task_ricorrenza: "daily" | "weekly"
@@ -676,6 +710,7 @@ export const Constants = {
       app_role: ["manager", "dipendente"],
       chat_canale_tipo: ["generale", "annunci", "reparto", "privato"],
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
+      notifica_tipo: ["turno", "scambio", "annuncio", "task", "generico"],
       pausa_tipo: ["pranzo", "caffe", "altro"],
       swap_status: ["pending", "approved", "rejected", "cancelled"],
       task_ricorrenza: ["daily", "weekly"],
