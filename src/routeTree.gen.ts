@@ -19,6 +19,7 @@ import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
 import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
+import { Route as ManagerChatRouteImport } from './routes/manager.chat'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
 import { Route as DipendenteProfiloRouteImport } from './routes/dipendente.profilo'
@@ -77,6 +78,11 @@ const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ManagerChatRoute = ManagerChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => ManagerRoute,
+} as any)
 const DipendenteTurniRoute = DipendenteTurniRouteImport.update({
   id: '/turni',
   path: '/turni',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/turni'
+    | '/manager/chat'
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/turni'
+    | '/manager/chat'
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/turni'
+    | '/manager/chat'
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDashboardRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/chat': {
+      id: '/manager/chat'
+      path: '/chat'
+      fullPath: '/manager/chat'
+      preLoaderRoute: typeof ManagerChatRouteImport
+      parentRoute: typeof ManagerRoute
+    }
     '/dipendente/turni': {
       id: '/dipendente/turni'
       path: '/turni'
@@ -384,6 +403,7 @@ const DipendenteRouteWithChildren = DipendenteRoute._addFileChildren(
 )
 
 interface ManagerRouteChildren {
+  ManagerChatRoute: typeof ManagerChatRoute
   ManagerDashboardRoute: typeof ManagerDashboardRoute
   ManagerReportRoute: typeof ManagerReportRoute
   ManagerScambiRoute: typeof ManagerScambiRoute
@@ -393,6 +413,7 @@ interface ManagerRouteChildren {
 }
 
 const ManagerRouteChildren: ManagerRouteChildren = {
+  ManagerChatRoute: ManagerChatRoute,
   ManagerDashboardRoute: ManagerDashboardRoute,
   ManagerReportRoute: ManagerReportRoute,
   ManagerScambiRoute: ManagerScambiRoute,
