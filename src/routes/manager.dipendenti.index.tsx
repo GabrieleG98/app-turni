@@ -222,6 +222,55 @@ function ListaDipendenti() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!delTarget} onOpenChange={(o) => !o && !busy && setDelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare {delTarget?.nome}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Azione irreversibile. Verranno eliminati account, profilo, turni, timbrature, pause,
+              task, disponibilità, scambi, correzioni, messaggi chat e notifiche di {delTarget?.nome}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="conf-del">Per confermare, digita <span className="font-mono font-semibold">{delTarget?.nome}</span></Label>
+            <Input
+              id="conf-del"
+              value={delConfirm}
+              onChange={(e) => setDelConfirm(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy || delConfirm.trim() !== (delTarget?.nome ?? "").trim()}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!delTarget) return;
+                setBusy(true);
+                try {
+                  await eliminaFn({ data: { user_id: delTarget.id } });
+                  toast.success(`${delTarget.nome} eliminato dal team`);
+                  qc.invalidateQueries({ queryKey: ["profiles"] });
+                  qc.invalidateQueries({ queryKey: ["user_roles"] });
+                  setDelTarget(null);
+                  setDelConfirm("");
+                } catch (err) {
+                  toast.error("Eliminazione fallita", {
+                    description: err instanceof Error ? err.message : String(err),
+                  });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
