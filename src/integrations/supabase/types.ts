@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      disponibilita: {
+        Row: {
+          created_at: string
+          dipendente_id: string
+          giorno_settimana: number
+          id: string
+          note: string | null
+          ora_fine: string
+          ora_inizio: string
+          tipo: Database["public"]["Enums"]["disponibilita_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dipendente_id: string
+          giorno_settimana: number
+          id?: string
+          note?: string | null
+          ora_fine: string
+          ora_inizio: string
+          tipo?: Database["public"]["Enums"]["disponibilita_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dipendente_id?: string
+          giorno_settimana?: number
+          id?: string
+          note?: string | null
+          ora_fine?: string
+          ora_inizio?: string
+          tipo?: Database["public"]["Enums"]["disponibilita_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cognome: string
@@ -98,6 +134,7 @@ export type Database = {
           note: string | null
           ora_fine: string
           ora_inizio: string
+          pubblicato: boolean
           tipo_turno: Database["public"]["Enums"]["tipo_turno"]
           updated_at: string
         }
@@ -110,6 +147,7 @@ export type Database = {
           note?: string | null
           ora_fine: string
           ora_inizio: string
+          pubblicato?: boolean
           tipo_turno: Database["public"]["Enums"]["tipo_turno"]
           updated_at?: string
         }
@@ -122,6 +160,7 @@ export type Database = {
           note?: string | null
           ora_fine?: string
           ora_inizio?: string
+          pubblicato?: boolean
           tipo_turno?: Database["public"]["Enums"]["tipo_turno"]
           updated_at?: string
         }
@@ -131,6 +170,83 @@ export type Database = {
             columns: ["dipendente_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turni_template: {
+        Row: {
+          created_at: string
+          created_by: string
+          descrizione: string | null
+          id: string
+          nome: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          descrizione?: string | null
+          id?: string
+          nome: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          descrizione?: string | null
+          id?: string
+          nome?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      turno_swap_requests: {
+        Row: {
+          a_dipendente: string
+          created_at: string
+          da_dipendente: string
+          decisione_at: string | null
+          decisione_di: string | null
+          id: string
+          motivo: string | null
+          status: Database["public"]["Enums"]["swap_status"]
+          turno_id: string
+          updated_at: string
+        }
+        Insert: {
+          a_dipendente: string
+          created_at?: string
+          da_dipendente: string
+          decisione_at?: string | null
+          decisione_di?: string | null
+          id?: string
+          motivo?: string | null
+          status?: Database["public"]["Enums"]["swap_status"]
+          turno_id: string
+          updated_at?: string
+        }
+        Update: {
+          a_dipendente?: string
+          created_at?: string
+          da_dipendente?: string
+          decisione_at?: string | null
+          decisione_di?: string | null
+          id?: string
+          motivo?: string | null
+          status?: Database["public"]["Enums"]["swap_status"]
+          turno_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turno_swap_requests_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turni"
             referencedColumns: ["id"]
           },
         ]
@@ -171,6 +287,8 @@ export type Database = {
     }
     Enums: {
       app_role: "manager" | "dipendente"
+      disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
+      swap_status: "pending" | "approved" | "rejected" | "cancelled"
       tipo_turno: "mattina" | "pomeriggio" | "sera"
     }
     CompositeTypes: {
@@ -300,6 +418,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["manager", "dipendente"],
+      disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
+      swap_status: ["pending", "approved", "rejected", "cancelled"],
       tipo_turno: ["mattina", "pomeriggio", "sera"],
     },
   },
