@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   fmtData,
   fmtOre,
@@ -12,11 +14,11 @@ import {
   inizioSettimana,
   isoData,
   oreTimbratura,
-  oreTraOrari,
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
@@ -24,8 +26,27 @@ export const Route = createFileRoute("/manager/dipendenti/$id")({
 
 function DettaglioDipendente() {
   const { id } = Route.useParams();
+  const qc = useQueryClient();
   const [inizio, setInizio] = useState(inizioSettimana());
   const fine = addDays(inizio, 6);
+  const [me, setMe] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+  }, []);
+
+  const { data: ruoli = [] } = useQuery({
+    queryKey: ["user_roles"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("user_id, role, created_at")
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+  const ownerId = ruoli.find((r) => r.role === "manager")?.user_id ?? null;
+  const iAmOwner = me !== null && me === ownerId;
 
   const { data: profilo } = useQuery({
     queryKey: ["profile", id],
@@ -34,6 +55,35 @@ function DettaglioDipendente() {
       return data;
     },
   });
+
+  const [ruoloLavoro, setRuoloLavoro] = useState("");
+  const [reparto, setReparto] = useState("");
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profilo && savedKey !== profilo.id) {
+      setRuoloLavoro(profilo.ruolo_lavoro ?? "");
+      setReparto(profilo.reparto ?? "");
+      setSavedKey(profilo.id);
+    }
+  }, [profilo, savedKey]);
+
+  const salvaDatiLavoro = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ ruolo_lavoro: ruoloLavoro.trim(), reparto: reparto.trim() })
+      .eq("id", id);
+    setSaving(false);
+    if (error) {
+      toast.error("Errore salvataggio", { description: error.message });
+    } else {
+      toast.success("Dati lavorativi aggiornati");
+      qc.invalidateQueries({ queryKey: ["profile", id] });
+      qc.invalidateQueries({ queryKey: ["profiles"] });
+    }
+  };
 
   const { data: turni = [] } = useQuery({
     queryKey: ["turni-dip", id, isoData(inizio)],
@@ -78,6 +128,29 @@ function DettaglioDipendente() {
             <span>Ruolo: <span className="text-foreground">{profilo.ruolo_lavoro || "—"}</span></span>
             <span>Reparto: <span className="text-foreground">{profilo.reparto || "—"}</span></span>
           </div>
+        </Card>
+      )}
+
+      {iAmOwner && profilo && (
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="font-semibold">Modifica dati lavorativi</h2>
+            <p className="text-xs text-muted-foreground">Solo il proprietario può modificare ruolo e reparto di tutti i membri.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="rl">Ruolo lavoro</Label>
+              <Input id="rl" value={ruoloLavoro} onChange={(e) => setRuoloLavoro(e.target.value)} maxLength={80} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rp">Reparto</Label>
+              <Input id="rp" value={reparto} onChange={(e) => setReparto(e.target.value)} maxLength={80} />
+            </div>
+          </div>
+          <Button onClick={salvaDatiLavoro} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Salva
+          </Button>
         </Card>
       )}
 

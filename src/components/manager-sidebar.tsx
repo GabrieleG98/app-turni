@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +23,7 @@ const items = [
   { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
   { title: "Chat", url: "/manager/chat", icon: MessageCircle },
   { title: "Report", url: "/manager/report", icon: FileText },
+  { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
 ];
 
 export function ManagerSidebar() {

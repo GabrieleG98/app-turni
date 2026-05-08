@@ -19,6 +19,7 @@ import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
 import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
+import { Route as ManagerProfiloRouteImport } from './routes/manager.profilo'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
 import { Route as ManagerChatRouteImport } from './routes/manager.chat'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
@@ -77,6 +78,11 @@ const ManagerScambiRoute = ManagerScambiRouteImport.update({
 const ManagerReportRoute = ManagerReportRouteImport.update({
   id: '/report',
   path: '/report',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const ManagerProfiloRoute = ManagerProfiloRouteImport.update({
+  id: '/profilo',
+  path: '/profilo',
   getParentRoute: () => ManagerRoute,
 } as any)
 const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/dashboard'
+    | '/manager/profilo'
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/dashboard'
+    | '/manager/profilo'
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/dashboard'
+    | '/manager/profilo'
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
@@ -331,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/report'
       fullPath: '/manager/report'
       preLoaderRoute: typeof ManagerReportRouteImport
+      parentRoute: typeof ManagerRoute
+    }
+    '/manager/profilo': {
+      id: '/manager/profilo'
+      path: '/profilo'
+      fullPath: '/manager/profilo'
+      preLoaderRoute: typeof ManagerProfiloRouteImport
       parentRoute: typeof ManagerRoute
     }
     '/manager/dashboard': {
@@ -424,6 +443,7 @@ const DipendenteRouteWithChildren = DipendenteRoute._addFileChildren(
 interface ManagerRouteChildren {
   ManagerChatRoute: typeof ManagerChatRoute
   ManagerDashboardRoute: typeof ManagerDashboardRoute
+  ManagerProfiloRoute: typeof ManagerProfiloRoute
   ManagerReportRoute: typeof ManagerReportRoute
   ManagerScambiRoute: typeof ManagerScambiRoute
   ManagerTasksRoute: typeof ManagerTasksRoute
@@ -435,6 +455,7 @@ interface ManagerRouteChildren {
 const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerChatRoute: ManagerChatRoute,
   ManagerDashboardRoute: ManagerDashboardRoute,
+  ManagerProfiloRoute: ManagerProfiloRoute,
   ManagerReportRoute: ManagerReportRoute,
   ManagerScambiRoute: ManagerScambiRoute,
   ManagerTasksRoute: ManagerTasksRoute,
