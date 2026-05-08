@@ -1,30 +1,41 @@
-# Timbra anche da owner/manager e calcola la differenza ore
+## Obiettivo
+Permettere al proprietario (e ai manager, esclusi se stessi e il proprietario) di **rimuovere completamente un membro** dal team: cancella account, profilo, ruolo e tutti i dati collegati (turni, timbrature, pause, disponibilità, correzioni, scambi, task, messaggi chat, notifiche).
 
-## Problema
-1. Il bottone "Timbra" non si attiva per te perché la finestra è legata a un turno schedulato (`computeWindow` → `no-shift` se non hai turno) e tu, come owner, non ti pianifichi un turno.
-2. La query `timb-oggi` non filtra per `dipendente_id`: con i permessi manager (vede tutte le timbrature) `maybeSingle()` può restituire la timbratura di qualcun altro o crashare se ce n'è più di una. Bug da fixare per chiunque sia manager.
-3. Una volta timbrato, le ore + differenza sono già calcolate nel Report (`/manager/report`), ma:
-   - oggi il report mostra TUTTI i profili indipendentemente dal ruolo: ✅ niente da cambiare per i totali per persona.
-   - manca la tua riga personale evidenziata in alto come "Le mie ore".
+## Dove appare il pulsante
+1. **`src/routes/manager.dipendenti.index.tsx`** — nuova colonna/azione "Elimina" (icona cestino rossa) accanto a "Promuovi/Retrocedi". Disabilitata per:
+   - Sé stessi
+   - Il proprietario (a meno che non sia l'owner stesso ad agire — ma l'owner non può eliminare sé stesso comunque)
+2. **`src/routes/manager.dipendenti.$id.tsx`** — card "Zona pericolo" in fondo con bottone "Elimina dipendente dal team".
 
-## Modifiche
+## Flusso conferma
+- `AlertDialog` di conferma con avviso esplicito: *"Questa azione è irreversibile. Verranno eliminati: profilo, account, turni, timbrature, pause, task, disponibilità, scambi, correzioni, messaggi chat e notifiche di {Nome Cognome}."*
+- Richiede di digitare il nome del dipendente per confermare (anti-click accidentale).
 
-**`src/lib/timbra-window.ts`**
-- Aggiungo un parametro `freeMode?: boolean` a `computeWindow`. Quando `true` (manager/owner) e non c'è turno → stato `available` invece di `no-shift`. Se c'è un turno, le regole restano identiche (per coerenza/ritardo).
+## Backend — Edge Function `elimina-dipendente`
+Serve perché cancellare da `auth.users` richiede la **service role key**, non disponibile dal client.
 
-**`src/hooks/use-timbratura.ts`**
-- Filtro `timb-oggi` per `dipendente_id = user.id` (fix bug manager) e includo l'id utente nella `queryKey`.
-- Stesso per `pause-oggi`.
-- Espongo `isManagerFreeMode` (vero se ruolo = manager) e lo passo a `computeWindow`. → manager/owner possono timbrare in qualsiasi momento; dipendenti restano vincolati.
+**`supabase/functions/elimina-dipendente/index.ts`**
+- Verifica JWT del chiamante (`verify_jwt = true`, default).
+- Controlla che il chiamante sia manager via `has_role`.
+- Riceve `{ user_id: string }`.
+- Rifiuta se: `user_id === chiamante` (no auto-eliminazione) oppure target è owner e chiamante non è owner (`is_owner` RPC).
+- Pulisce a cascata con la service role:
+  1. `chat_membri`, `chat_messaggi` (autore_id)
+  2. `notifiche` (user_id)
+  3. `pause`, `timbrature`, `timbrature_correzioni`
+  4. `turni`, `turno_swap_requests` (sia da/a)
+  5. `disponibilita`
+  6. `task_assegnati`, `task_template` (assegnato_a → set null o delete dei suoi)
+  7. `user_roles`, `profiles`
+  8. `supabaseAdmin.auth.admin.deleteUser(user_id)`
+- Ritorna `{ ok: true }` o errore strutturato.
 
-**`src/components/timbra-fab.tsx`**
-- Tooltip aggiornato per i manager senza turno: "Timbratura libera (nessun turno schedulato)".
-- Il pulsante non sparisce solo dopo `completato` per il manager: rimane invisibile come oggi (regola invariata).
+Nessuna nuova migration — usa solo le RLS esistenti via service role (bypassa).
 
-**`src/routes/manager.report.tsx`**
-- Aggiungo in alto una card "Le mie ore" che mostra, per la settimana corrente, la riga relativa all'utente loggato: ore pianificate, effettive, straordinario, differenza con badge verde/rosso. Riusa il calcolo `righe` esistente.
+## Frontend
+- Mutazione `useMutation` che chiama `supabase.functions.invoke("elimina-dipendente", { body: { user_id } })`.
+- Su successo: toast + `qc.invalidateQueries(["profiles"])`, `["user_roles"]`. Se siamo sulla pagina dettaglio, naviga a `/manager/dipendenti`.
 
 ## Note
-- Nessuna migration: usa tabelle e RLS esistenti (`timbrature` ha già policy "Dipendente crea/aggiorna/vede proprie timbrature" che funziona per chiunque, manager incluso).
-- L'export Excel del report già include tutti i profili → automaticamente avrai anche le tue ore lì.
-- Niente cambi al `dipendente.index` (non era richiesto vedere la differenza giornaliera).
+- Le foto in storage (`timbrature-foto`) restano orfane: le ignoriamo per ora (bucket privato, costo minimo). Lo segnalo nel piano se vuoi che le elimini anch'esse.
+- Nessuna modifica al `dipendente.*` lato utente (chi viene eliminato semplicemente non potrà più loggarsi).

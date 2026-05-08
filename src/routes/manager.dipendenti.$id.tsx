@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +17,14 @@ import {
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useServerFn } from "@tanstack/react-start";
+import { eliminaDipendente } from "@/lib/elimina-dipendente.functions";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
@@ -27,9 +33,14 @@ export const Route = createFileRoute("/manager/dipendenti/$id")({
 function DettaglioDipendente() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [inizio, setInizio] = useState(inizioSettimana());
   const fine = addDays(inizio, 6);
   const [me, setMe] = useState<string | null>(null);
+  const [delOpen, setDelOpen] = useState(false);
+  const [delConfirm, setDelConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const eliminaFn = useServerFn(eliminaDipendente);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
@@ -218,6 +229,79 @@ function DettaglioDipendente() {
           </div>
         )}
       </Card>
+
+      {profilo && me !== id && ownerId !== id && (
+        <Card className="p-6 border-destructive/40">
+          <h2 className="font-semibold text-destructive">Zona pericolo</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Rimuovi {profilo.nome} {profilo.cognome} dal team. L'account e tutti i suoi dati
+            (turni, timbrature, pause, task, disponibilità, scambi, correzioni, messaggi e
+            notifiche) verranno eliminati definitivamente.
+          </p>
+          <Button
+            variant="destructive"
+            className="mt-4"
+            onClick={() => { setDelConfirm(""); setDelOpen(true); }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Elimina dal team
+          </Button>
+        </Card>
+      )}
+
+      <AlertDialog open={delOpen} onOpenChange={(o) => !o && !deleting && setDelOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Eliminare {profilo?.nome} {profilo?.cognome}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Azione irreversibile. Tutti i dati associati verranno eliminati.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="conf-del">
+              Per confermare, digita{" "}
+              <span className="font-mono font-semibold">
+                {profilo?.nome} {profilo?.cognome}
+              </span>
+            </Label>
+            <Input
+              id="conf-del"
+              value={delConfirm}
+              onChange={(e) => setDelConfirm(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={
+                deleting ||
+                delConfirm.trim() !== `${profilo?.nome ?? ""} ${profilo?.cognome ?? ""}`.trim()
+              }
+              onClick={async (e) => {
+                e.preventDefault();
+                setDeleting(true);
+                try {
+                  await eliminaFn({ data: { user_id: id } });
+                  toast.success("Dipendente eliminato");
+                  qc.invalidateQueries({ queryKey: ["profiles"] });
+                  qc.invalidateQueries({ queryKey: ["user_roles"] });
+                  navigate({ to: "/manager/dipendenti" });
+                } catch (err) {
+                  toast.error("Eliminazione fallita", {
+                    description: err instanceof Error ? err.message : String(err),
+                  });
+                  setDeleting(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

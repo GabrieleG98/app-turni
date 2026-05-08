@@ -12,8 +12,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, UserPlus, ShieldCheck, ShieldOff } from "lucide-react";
+import { Copy, UserPlus, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { eliminaDipendente } from "@/lib/elimina-dipendente.functions";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/manager/dipendenti/")({
   component: ListaDipendenti,
@@ -23,7 +27,10 @@ function ListaDipendenti() {
   const qc = useQueryClient();
   const [me, setMe] = useState<string | null>(null);
   const [target, setTarget] = useState<{ id: string; nome: string; promote: boolean } | null>(null);
+  const [delTarget, setDelTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [delConfirm, setDelConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const eliminaFn = useServerFn(eliminaDipendente);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
@@ -143,30 +150,50 @@ function ListaDipendenti() {
                   <TableCell>{p.ruolo_lavoro || "—"}</TableCell>
                   <TableCell>{p.reparto || "—"}</TableCell>
                   <TableCell className="text-right">
-                    {manager ? (
+                    <div className="flex justify-end gap-1.5 flex-wrap">
+                      {manager ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={self || ownerLocked}
+                          title={
+                            ownerLocked
+                              ? "Solo il proprietario può modificare il proprio ruolo"
+                              : self
+                              ? "Non puoi retrocedere te stesso"
+                              : undefined
+                          }
+                          onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: false })}
+                        >
+                          <ShieldOff className="h-4 w-4 mr-1.5" /> Retrocedi
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: true })}
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-1.5" /> Promuovi a manager
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        disabled={self || ownerLocked}
+                        variant="destructive"
+                        disabled={self || isOwner}
                         title={
-                          ownerLocked
-                            ? "Solo il proprietario può modificare il proprio ruolo"
-                            : self
-                            ? "Non puoi retrocedere te stesso"
-                            : undefined
+                          self
+                            ? "Non puoi eliminare te stesso"
+                            : isOwner
+                            ? "Il proprietario non può essere eliminato"
+                            : "Elimina dal team"
                         }
-                        onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: false })}
+                        onClick={() => {
+                          setDelConfirm("");
+                          setDelTarget({ id: p.id, nome: `${p.nome} ${p.cognome}` });
+                        }}
                       >
-                        <ShieldOff className="h-4 w-4 mr-1.5" /> Retrocedi
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: true })}
-                      >
-                        <ShieldCheck className="h-4 w-4 mr-1.5" /> Promuovi a manager
-                      </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -191,6 +218,55 @@ function ListaDipendenti() {
             <AlertDialogCancel disabled={busy}>Annulla</AlertDialogCancel>
             <AlertDialogAction onClick={conferma} disabled={busy}>
               Conferma
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!delTarget} onOpenChange={(o) => !o && !busy && setDelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare {delTarget?.nome}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Azione irreversibile. Verranno eliminati account, profilo, turni, timbrature, pause,
+              task, disponibilità, scambi, correzioni, messaggi chat e notifiche di {delTarget?.nome}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="conf-del">Per confermare, digita <span className="font-mono font-semibold">{delTarget?.nome}</span></Label>
+            <Input
+              id="conf-del"
+              value={delConfirm}
+              onChange={(e) => setDelConfirm(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy || delConfirm.trim() !== (delTarget?.nome ?? "").trim()}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!delTarget) return;
+                setBusy(true);
+                try {
+                  await eliminaFn({ data: { user_id: delTarget.id } });
+                  toast.success(`${delTarget.nome} eliminato dal team`);
+                  qc.invalidateQueries({ queryKey: ["profiles"] });
+                  qc.invalidateQueries({ queryKey: ["user_roles"] });
+                  setDelTarget(null);
+                  setDelConfirm("");
+                } catch (err) {
+                  toast.error("Eliminazione fallita", {
+                    description: err instanceof Error ? err.message : String(err),
+                  });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
