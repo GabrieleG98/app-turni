@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,8 @@ import {
 import {
   fmtOre, fmtSettimana, inizioSettimana, isoData, oreTimbratura, oreTraOrari,
 } from "@/lib/date-utils";
-import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { addDays, addWeeks, format } from "date-fns";
+import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/report")({
@@ -58,20 +59,86 @@ function Report() {
     return { p, oreP, oreE, oreLordo, minPause, straord, diff: oreE - oreP };
   }), [profili, turni, timbrature, pause]);
 
-  const esportaCSV = () => {
-    const header = ["Cognome","Nome","Reparto","Ore pianificate","Ore lordo","Pause (min)","Ore nette","Straordinario","Differenza"];
-    const rows = righe.map(({ p, oreP, oreLordo, minPause, oreE, straord, diff }) =>
-      [p.cognome, p.nome, p.reparto, oreP.toFixed(2), oreLordo.toFixed(2), Math.round(minPause), oreE.toFixed(2), straord.toFixed(2), diff.toFixed(2)].join(",")
-    );
-    const csv = "\uFEFF" + [header.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report-ore-${isoData(inizio)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Report esportato");
+  const esportaExcel = () => {
+    const titolo = `Report ore · ${format(inizio, "dd/MM/yyyy")} – ${format(fine, "dd/MM/yyyy")}`;
+    const header = [
+      "Cognome", "Nome", "Reparto", "Ruolo",
+      "Ore pianificate", "Ore lordo", "Pause (min)",
+      "Ore nette", "Straordinario", "Differenza",
+    ];
+    const dataRows = righe.map(({ p, oreP, oreLordo, minPause, oreE, straord, diff }) => [
+      p.cognome,
+      p.nome,
+      p.reparto || "",
+      p.ruolo_lavoro || "",
+      Number(oreP.toFixed(2)),
+      Number(oreLordo.toFixed(2)),
+      Math.round(minPause),
+      Number(oreE.toFixed(2)),
+      Number(straord.toFixed(2)),
+      Number(diff.toFixed(2)),
+    ]);
+
+    const totali = [
+      "TOTALI", "", "", "",
+      Number(righe.reduce((s, r) => s + r.oreP, 0).toFixed(2)),
+      Number(righe.reduce((s, r) => s + r.oreLordo, 0).toFixed(2)),
+      Math.round(righe.reduce((s, r) => s + r.minPause, 0)),
+      Number(righe.reduce((s, r) => s + r.oreE, 0).toFixed(2)),
+      Number(righe.reduce((s, r) => s + r.straord, 0).toFixed(2)),
+      Number(righe.reduce((s, r) => s + r.diff, 0).toFixed(2)),
+    ];
+
+    const aoa: (string | number)[][] = [
+      [titolo],
+      [],
+      header,
+      ...dataRows,
+      [],
+      totali,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Larghezza colonne
+    ws["!cols"] = [
+      { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
+      { wch: 16 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 14 }, { wch: 12 },
+    ];
+
+    // Merge titolo su tutte le colonne
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: header.length - 1 } }];
+
+    // Bold header (riga 3, indice 2)
+    const headerRowIdx = 2;
+    for (let c = 0; c < header.length; c++) {
+      const ref = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+      const cell = ws[ref];
+      if (cell) cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
+    }
+    // Bold titolo
+    if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 14 } };
+    // Bold totali
+    const totRow = aoa.length - 1;
+    for (let c = 0; c < header.length; c++) {
+      const ref = XLSX.utils.encode_cell({ r: totRow, c });
+      const cell = ws[ref];
+      if (cell) cell.s = { font: { bold: true } };
+    }
+
+    // Format numerico
+    for (let r = 3; r < 3 + dataRows.length; r++) {
+      for (const c of [4, 5, 7, 8, 9]) {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if (ws[ref]) ws[ref].z = "0.00";
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report ore");
+    XLSX.writeFile(wb, `report-ore-${isoData(inizio)}.xlsx`);
+    toast.success("Report Excel esportato");
   };
 
   return (
@@ -88,8 +155,8 @@ function Report() {
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button className="ml-auto" onClick={esportaCSV}>
-          <Download className="h-4 w-4 mr-2" /> Esporta CSV
+        <Button className="ml-auto" onClick={esportaExcel}>
+          <FileSpreadsheet className="h-4 w-4 mr-2" /> Esporta Excel
         </Button>
       </Card>
       <Card>

@@ -52,7 +52,7 @@ function ListaDipendenti() {
   const ownerId = ruoli.find((r) => r.role === "manager")?.user_id ?? null;
   const iAmOwner = me !== null && me === ownerId;
 
-  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/registrati` : "/registrati";
+  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/unisciti-4fun` : "/unisciti-4fun";
 
   const copia = async () => {
     try {
