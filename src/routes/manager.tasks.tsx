@@ -239,6 +239,58 @@ function ManagerTasks() {
         </Dialog>
       </div>
 
+      {/* Task di oggi */}
+      <Card className="p-4 border-0 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-sm">Task di oggi · <span className="capitalize text-muted-foreground font-normal">{fmtData(new Date(), "EEEE d MMMM")}</span></h2>
+          <span className="text-xs text-muted-foreground">
+            {tasksOggi.filter((t: any) => t.completato_at).length}/{tasksOggi.length} completati
+          </span>
+        </div>
+        {tasksOggi.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Nessun task assegnato oggi.</p>
+        ) : (
+          <ul className="divide-y">
+            {tasksOggi.map((t: any) => {
+              const dip = dipendenti.find((d: any) => d.id === t.dipendente_id);
+              const done = !!t.completato_at;
+              return (
+                <li key={t.id} className="py-2 flex items-center gap-3 text-sm">
+                  {done ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className={done ? "line-through text-muted-foreground" : ""}>{t.titolo}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {dip ? `${dip.nome} ${dip.cognome}` : "—"}
+                      {done && ` · ${new Date(t.completato_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
+                    </div>
+                  </div>
+                  {t.foto_url && (
+                    <Button variant="ghost" size="sm" onClick={() => apriFoto(t.foto_url)}>
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Dialog open={!!fotoOpen} onOpenChange={(o) => { if (!o) { setFotoOpen(null); setFotoSignedUrl(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Foto del task</DialogTitle></DialogHeader>
+          {fotoSignedUrl ? (
+            <img src={fotoSignedUrl} alt="Foto task" className="w-full rounded-lg" />
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">Caricamento…</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-3">
         {templates.length === 0 && (
           <Card className="p-8 text-center text-sm text-muted-foreground">
