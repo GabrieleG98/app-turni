@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Briefcase, Building2, Mail } from "lucide-react";
+import { LogOut, User as UserIcon, Briefcase, Building2, Mail, CalendarClock, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/dipendente/profilo")({
   component: Profilo,
