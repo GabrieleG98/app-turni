@@ -39,18 +39,29 @@ function Report() {
       .gte("data", isoData(inizio)).lte("data", isoData(fine))).data ?? [],
   });
 
+  const { data: pause = [] } = useQuery({
+    queryKey: ["pause-rep", isoData(inizio)],
+    queryFn: async () => (await supabase.from("pause").select("*")
+      .gte("inizio", new Date(isoData(inizio)).toISOString())
+      .lte("inizio", new Date(isoData(fine) + "T23:59:59").toISOString())).data ?? [],
+  });
+
   const righe = useMemo(() => profili.map((p) => {
     const oreP = turni.filter((t) => t.dipendente_id === p.id)
       .reduce((s, t) => s + oreTraOrari(t.ora_inizio, t.ora_fine, t.data), 0);
-    const oreE = timbrature.filter((t) => t.dipendente_id === p.id)
+    const minPause = pause.filter((x) => x.dipendente_id === p.id && x.fine)
+      .reduce((s, x) => s + (new Date(x.fine).getTime() - new Date(x.inizio).getTime()) / 60000, 0);
+    const oreLordo = timbrature.filter((t) => t.dipendente_id === p.id)
       .reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
-    return { p, oreP, oreE, diff: oreE - oreP };
-  }), [profili, turni, timbrature]);
+    const oreE = Math.max(0, oreLordo - minPause / 60);
+    const straord = Math.max(0, oreE - oreP);
+    return { p, oreP, oreE, oreLordo, minPause, straord, diff: oreE - oreP };
+  }), [profili, turni, timbrature, pause]);
 
   const esportaCSV = () => {
-    const header = ["Cognome", "Nome", "Reparto", "Ore pianificate", "Ore lavorate", "Differenza"];
-    const rows = righe.map(({ p, oreP, oreE, diff }) =>
-      [p.cognome, p.nome, p.reparto, oreP.toFixed(2), oreE.toFixed(2), diff.toFixed(2)].join(",")
+    const header = ["Cognome","Nome","Reparto","Ore pianificate","Ore lordo","Pause (min)","Ore nette","Straordinario","Differenza"];
+    const rows = righe.map(({ p, oreP, oreLordo, minPause, oreE, straord, diff }) =>
+      [p.cognome, p.nome, p.reparto, oreP.toFixed(2), oreLordo.toFixed(2), Math.round(minPause), oreE.toFixed(2), straord.toFixed(2), diff.toFixed(2)].join(",")
     );
     const csv = "\uFEFF" + [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
