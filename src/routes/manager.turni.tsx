@@ -405,7 +405,7 @@ function GestioneTurni() {
               <tr key={p.id} className="border-b">
                 <td className="p-3 sticky left-0 bg-background font-medium">
                   <div>{p.nome} {p.cognome}</div>
-                  <div className="text-xs text-muted-foreground">{p.reparto}</div>
+                  <div className="text-xs text-muted-foreground">{p.ruolo_lavoro}</div>
                 </td>
                 {giorni.map((g) => {
                   const dataIso = isoData(g);
