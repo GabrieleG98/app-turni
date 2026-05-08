@@ -24,6 +24,10 @@ function DipendenteLayout() {
 
   return (
     <div className="min-h-screen bg-muted/20 pb-20">
+      <div className="fixed top-2 right-2 z-30 flex items-center gap-1">
+        <NotificheBell className="bg-background/80 backdrop-blur rounded-full shadow" />
+        <ThemeToggle className="bg-background/80 backdrop-blur rounded-full shadow" />
+      </div>
       <Outlet />
       <DipendenteBottomNav />
     </div>
