@@ -80,6 +80,7 @@ function ManagerTasks() {
     setGiorni([1, 2, 3, 4, 5, 6, 7]);
     setAssegnatoA("__all__");
     setReparto("");
+    setRichiedeFoto(false);
   };
 
   const crea = async () => {
@@ -91,6 +92,7 @@ function ManagerTasks() {
       giorni_settimana: giorni.length ? giorni : [1, 2, 3, 4, 5, 6, 7],
       assegnato_a: assegnatoA !== "__all__" ? assegnatoA : null,
       reparto: assegnatoA === "__all__" && reparto.trim() ? reparto.trim() : null,
+      richiede_foto: richiedeFoto,
       created_by: user!.id,
     });
     if (error) return toast.error("Errore", { description: error.message });
