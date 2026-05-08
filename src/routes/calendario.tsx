@@ -427,17 +427,4 @@ function CategorieLegenda() {
     </Card>
   );
 }
-          </TabsContent>
-        </Tabs>
-      </main>
 
-      <EventoDialog
-        open={eventoDialog.open}
-        onOpenChange={(o) => setEventoDialog((s) => ({ ...s, open: o }))}
-        initialData={eventoDialog.initialData}
-        defaultDate={eventoDialog.defaultDate}
-        readOnly={eventoDialog.readOnly}
-      />
-    </div>
-  );
-}
