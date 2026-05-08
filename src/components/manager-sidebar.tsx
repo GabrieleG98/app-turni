@@ -29,9 +29,9 @@ export function ManagerSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <Hotel className="h-5 w-5 text-primary" />
-          <span>Turni Resort</span>
+        <div className="flex items-center gap-2 font-semibold leading-tight">
+          <Hotel className="h-5 w-5 text-primary shrink-0" />
+          <span className="truncate">Schedule Timi Ama 4Fun</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
