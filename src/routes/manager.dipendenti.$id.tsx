@@ -33,9 +33,14 @@ export const Route = createFileRoute("/manager/dipendenti/$id")({
 function DettaglioDipendente() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [inizio, setInizio] = useState(inizioSettimana());
   const fine = addDays(inizio, 6);
   const [me, setMe] = useState<string | null>(null);
+  const [delOpen, setDelOpen] = useState(false);
+  const [delConfirm, setDelConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const eliminaFn = useServerFn(eliminaDipendente);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
