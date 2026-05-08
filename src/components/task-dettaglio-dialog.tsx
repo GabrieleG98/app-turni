@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -107,9 +107,18 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
     }
   };
 
-  const fotoSalvataUrl = task.foto_url
-    ? supabase.storage.from("task-foto").getPublicUrl(task.foto_url).data.publicUrl
-    : null;
+  const [fotoSalvataUrl, setFotoSalvataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (task?.foto_url) {
+      supabase.storage.from("task-foto").createSignedUrl(task.foto_url, 3600).then(({ data }) => {
+        if (active && data?.signedUrl) setFotoSalvataUrl(data.signedUrl);
+      });
+    } else {
+      setFotoSalvataUrl(null);
+    }
+    return () => { active = false; };
+  }, [task?.foto_url]);
 
   return (
     <Dialog open={!!task} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
