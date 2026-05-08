@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { fmtData, giorniSettimana, inizioSettimana, isoData, GIORNI } from "@/lib/date-utils";
+import { fmtData, giorniSettimana, inizioSettimana, isoData, GIORNI, oreTraOrari } from "@/lib/date-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ArrowRightLeft } from "lucide-react";
@@ -128,15 +128,14 @@ function MieiTurni() {
         </Card>
 
         {giorni.map((g, i) => {
-          const t = turni.find((x) => x.data === isoData(g));
+          const turniGiorno = turni.filter((x) => x.data === isoData(g));
           const isOggi = isoData(g) === oggi;
-          const swapStatus = t ? swapMap.get(t.id) : undefined;
           return (
             <Card
               key={i}
               className={`p-4 border-0 shadow-sm space-y-3 ${isOggi ? "ring-2 ring-brand" : ""}`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center justify-center w-12 shrink-0">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     {GIORNI[i].slice(0, 3)}
@@ -145,54 +144,61 @@ function MieiTurni() {
                     {fmtData(g, "d")}
                   </div>
                 </div>
-                <div className="flex-1">
-                  {t ? (
-                    <>
-                      <div className="font-semibold capitalize">{t.tipo_turno}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {t.ora_inizio.slice(0, 5)} – {t.ora_fine.slice(0, 5)}
-                        {t.location && ` · ${t.location}`}
-                      </div>
-                    </>
-                  ) : (
+                <div className="flex-1 space-y-2">
+                  {turniGiorno.length === 0 ? (
                     <div className="text-sm text-muted-foreground">Giorno libero</div>
+                  ) : (
+                    turniGiorno.map((t) => {
+                      const swapStatus = swapMap.get(t.id);
+                      const ore = oreTraOrari(t.ora_inizio, t.ora_fine, t.data);
+                      return (
+                        <div key={t.id} className="flex items-start gap-3">
+                          <div
+                            className={`w-1.5 self-stretch rounded-full ${
+                              t.tipo_turno === "mattina"
+                                ? "bg-turno-mattina"
+                                : t.tipo_turno === "pomeriggio"
+                                ? "bg-turno-pomeriggio"
+                                : "bg-turno-sera"
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="font-semibold capitalize">{t.tipo_turno}</div>
+                              <span className="text-[10px] opacity-60 font-medium">{ore.toFixed(1)}h</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {t.ora_inizio.slice(0, 5)} – {t.ora_fine.slice(0, 5)}
+                              {t.location && ` · ${t.location}`}
+                            </div>
+                            <div className="mt-1">
+                              {swapStatus === "pending" && (
+                                <span className="text-xs text-muted-foreground">Scambio in attesa…</span>
+                              )}
+                              {swapStatus === "approved" && (
+                                <span className="text-xs text-turno-mattina-foreground">Scambio approvato</span>
+                              )}
+                              {swapStatus === "rejected" && (
+                                <span className="text-xs text-destructive">Scambio rifiutato</span>
+                              )}
+                              {!swapStatus && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-xs h-7 px-2 -ml-2"
+                                  onClick={() => setSwap({ turno_id: t.id, a_dipendente: "", motivo: "" })}
+                                >
+                                  <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Richiedi scambio
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
-                {t && (
-                  <div
-                    className={`w-1.5 h-12 rounded-full ${
-                      t.tipo_turno === "mattina"
-                        ? "bg-turno-mattina"
-                        : t.tipo_turno === "pomeriggio"
-                        ? "bg-turno-pomeriggio"
-                        : "bg-turno-sera"
-                    }`}
-                  />
-                )}
               </div>
-              {t && (
-                <div className="flex items-center justify-between">
-                  {swapStatus === "pending" && (
-                    <span className="text-xs text-muted-foreground">Scambio in attesa…</span>
-                  )}
-                  {swapStatus === "approved" && (
-                    <span className="text-xs text-turno-mattina-foreground">Scambio approvato</span>
-                  )}
-                  {swapStatus === "rejected" && (
-                    <span className="text-xs text-destructive">Scambio rifiutato</span>
-                  )}
-                  {!swapStatus && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="ml-auto text-xs"
-                      onClick={() => setSwap({ turno_id: t.id, a_dipendente: "", motivo: "" })}
-                    >
-                      <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Richiedi scambio
-                    </Button>
-                  )}
-                </div>
-              )}
             </Card>
           );
         })}

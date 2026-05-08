@@ -44,7 +44,7 @@ import {
   LayoutTemplate,
   CheckCircle2,
 } from "lucide-react";
-import { fmtSettimana, giorniSettimana, inizioSettimana, isoData, GIORNI } from "@/lib/date-utils";
+import { fmtSettimana, giorniSettimana, inizioSettimana, isoData, GIORNI, oreTraOrari } from "@/lib/date-utils";
 import { addWeeks, addDays, format, getDay } from "date-fns";
 import { toast } from "sonner";
 
@@ -131,9 +131,16 @@ function GestioneTurni() {
     },
   });
 
-  const turniMap = useMemo(() => {
-    const m = new Map<string, typeof turni[number]>();
-    turni.forEach((t) => m.set(`${t.dipendente_id}|${t.data}`, t));
+  const turniByCell = useMemo(() => {
+    const m = new Map<string, typeof turni>();
+    turni.forEach((t) => {
+      const k = `${t.dipendente_id}|${t.data}`;
+      const arr = m.get(k) ?? [];
+      arr.push(t);
+      m.set(k, arr);
+    });
+    // Ordina per ora_inizio dentro ogni cella
+    m.forEach((arr) => arr.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio)));
     return m;
   }, [turni]);
 
@@ -143,30 +150,31 @@ function GestioneTurni() {
     return { tot, pub, bozza: tot - pub };
   }, [turni]);
 
-  const apri = (dip: string, data: string) => {
-    const esistente = turniMap.get(`${dip}|${data}`);
-    if (esistente) {
-      setEditing({
-        id: esistente.id,
-        dipendente_id: esistente.dipendente_id,
-        data: esistente.data,
-        ora_inizio: esistente.ora_inizio.slice(0, 5),
-        ora_fine: esistente.ora_fine.slice(0, 5),
-        tipo_turno: esistente.tipo_turno as "mattina" | "pomeriggio" | "sera",
-        location: esistente.location,
-        note: esistente.note ?? "",
-      });
-    } else {
-      setEditing({
-        dipendente_id: dip,
-        data,
-        ora_inizio: "09:00",
-        ora_fine: "13:00",
-        tipo_turno: "mattina",
-        location: "",
-        note: "",
-      });
-    }
+  const apriTurno = (t: typeof turni[number]) => {
+    setEditing({
+      id: t.id,
+      dipendente_id: t.dipendente_id,
+      data: t.data,
+      ora_inizio: t.ora_inizio.slice(0, 5),
+      ora_fine: t.ora_fine.slice(0, 5),
+      tipo_turno: t.tipo_turno as "mattina" | "pomeriggio" | "sera",
+      location: t.location,
+      note: t.note ?? "",
+    });
+  };
+
+  const nuovoTurno = (dip: string, data: string, suggerito?: "mattina" | "pomeriggio" | "sera") => {
+    const tipo = suggerito ?? "mattina";
+    const o = DEFAULT_ORARI[tipo];
+    setEditing({
+      dipendente_id: dip,
+      data,
+      ora_inizio: o.i,
+      ora_fine: o.f,
+      tipo_turno: tipo,
+      location: "",
+      note: "",
+    });
   };
 
   const salva = async () => {
@@ -409,34 +417,53 @@ function GestioneTurni() {
                 </td>
                 {giorni.map((g) => {
                   const dataIso = isoData(g);
-                  const t = turniMap.get(`${p.id}|${dataIso}`);
+                  const lista = turniByCell.get(`${p.id}|${dataIso}`) ?? [];
+                  const usati = new Set(lista.map((x) => x.tipo_turno));
+                  const disponibili: ("mattina" | "pomeriggio" | "sera")[] =
+                    (["mattina", "pomeriggio", "sera"] as const).filter((x) => !usati.has(x));
                   return (
-                    <td key={dataIso} className="p-1.5">
-                      <button
-                        onClick={() => apri(p.id, dataIso)}
-                        className={`w-full rounded-md p-2 text-left text-xs transition hover:opacity-80 relative ${
-                          t
-                            ? COLORE_TURNO[t.tipo_turno]
-                            : "bg-turno-libero text-turno-libero-foreground"
-                        } ${t && !t.pubblicato ? "ring-2 ring-dashed ring-foreground/40" : ""}`}
-                      >
-                        {t ? (
-                          <>
-                            <div className="font-semibold capitalize flex items-center gap-1">
-                              {t.tipo_turno}
-                              {!t.pubblicato && (
-                                <span className="text-[9px] uppercase bg-background/50 px-1 rounded">
-                                  bozza
-                                </span>
-                              )}
-                            </div>
-                            <div>{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
-                            {t.location && <div className="opacity-80 truncate">{t.location}</div>}
-                          </>
-                        ) : (
-                          <div className="text-center opacity-60">Libero</div>
-                        )}
-                      </button>
+                    <td key={dataIso} className="p-1.5 align-top">
+                      {lista.length === 0 ? (
+                        <button
+                          onClick={() => nuovoTurno(p.id, dataIso)}
+                          className="w-full rounded-md p-2 text-xs bg-turno-libero text-turno-libero-foreground text-center opacity-60 hover:opacity-100 transition"
+                        >
+                          Libero
+                        </button>
+                      ) : (
+                        <div className="space-y-1">
+                          {lista.map((t) => {
+                            const ore = oreTraOrari(t.ora_inizio, t.ora_fine, t.data);
+                            return (
+                              <button
+                                key={t.id}
+                                onClick={() => apriTurno(t)}
+                                className={`w-full rounded-md p-1.5 text-left text-xs transition hover:opacity-80 relative ${COLORE_TURNO[t.tipo_turno]} ${!t.pubblicato ? "ring-2 ring-dashed ring-foreground/40" : ""}`}
+                              >
+                                <div className="font-semibold capitalize flex items-center gap-1 leading-tight">
+                                  <span className="truncate">{t.tipo_turno}</span>
+                                  {!t.pubblicato && (
+                                    <span className="text-[9px] uppercase bg-background/50 px-1 rounded">
+                                      bozza
+                                    </span>
+                                  )}
+                                  <span className="ml-auto text-[10px] opacity-70 font-normal">{ore.toFixed(1)}h</span>
+                                </div>
+                                <div className="leading-tight">{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
+                                {t.location && <div className="opacity-80 truncate text-[10px]">{t.location}</div>}
+                              </button>
+                            );
+                          })}
+                          {disponibili.length > 0 && (
+                            <button
+                              onClick={() => nuovoTurno(p.id, dataIso, disponibili[0])}
+                              className="w-full rounded-md py-1 text-[10px] border border-dashed border-foreground/20 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                            >
+                              + {disponibili[0]}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   );
                 })}

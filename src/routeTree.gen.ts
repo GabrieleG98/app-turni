@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as Unisciti4funRouteImport } from './routes/unisciti-4fun'
 import { Route as RegistratiRouteImport } from './routes/registrati'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
@@ -30,6 +31,11 @@ import { Route as DipendenteChatRouteImport } from './routes/dipendente.chat'
 import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
 import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
 
+const Unisciti4funRoute = Unisciti4funRouteImport.update({
+  id: '/unisciti-4fun',
+  path: '/unisciti-4fun',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegistratiRoute = RegistratiRouteImport.update({
   id: '/registrati',
   path: '/registrati',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/manager'
     | '/registrati'
+    | '/unisciti-4fun'
     | '/dipendente/chat'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/manager'
     | '/registrati'
+    | '/unisciti-4fun'
     | '/dipendente/chat'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/manager'
     | '/registrati'
+    | '/unisciti-4fun'
     | '/dipendente/chat'
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
@@ -271,10 +283,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRouteWithChildren
   RegistratiRoute: typeof RegistratiRoute
+  Unisciti4funRoute: typeof Unisciti4funRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unisciti-4fun': {
+      id: '/unisciti-4fun'
+      path: '/unisciti-4fun'
+      fullPath: '/unisciti-4fun'
+      preLoaderRoute: typeof Unisciti4funRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/registrati': {
       id: '/registrati'
       path: '/registrati'
@@ -473,6 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ManagerRoute: ManagerRouteWithChildren,
   RegistratiRoute: RegistratiRoute,
+  Unisciti4funRoute: Unisciti4funRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
