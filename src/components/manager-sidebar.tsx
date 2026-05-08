@@ -11,13 +11,14 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
 const items = [
   { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard },
   { title: "Turni", url: "/manager/turni", icon: CalendarDays },
+  { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
   { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
   { title: "Report", url: "/manager/report", icon: FileText },
 ];
