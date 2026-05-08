@@ -224,6 +224,95 @@ export type Database = {
         }
         Relationships: []
       }
+      task_assegnati: {
+        Row: {
+          completato_at: string | null
+          created_at: string
+          data: string
+          descrizione: string | null
+          dipendente_id: string
+          id: string
+          note: string | null
+          template_id: string | null
+          titolo: string
+          updated_at: string
+        }
+        Insert: {
+          completato_at?: string | null
+          created_at?: string
+          data: string
+          descrizione?: string | null
+          dipendente_id: string
+          id?: string
+          note?: string | null
+          template_id?: string | null
+          titolo: string
+          updated_at?: string
+        }
+        Update: {
+          completato_at?: string | null
+          created_at?: string
+          data?: string
+          descrizione?: string | null
+          dipendente_id?: string
+          id?: string
+          note?: string | null
+          template_id?: string | null
+          titolo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assegnati_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_template"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_template: {
+        Row: {
+          assegnato_a: string | null
+          attivo: boolean
+          created_at: string
+          created_by: string | null
+          descrizione: string | null
+          giorni_settimana: number[]
+          id: string
+          reparto: string | null
+          ricorrenza: Database["public"]["Enums"]["task_ricorrenza"]
+          titolo: string
+          updated_at: string
+        }
+        Insert: {
+          assegnato_a?: string | null
+          attivo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descrizione?: string | null
+          giorni_settimana?: number[]
+          id?: string
+          reparto?: string | null
+          ricorrenza?: Database["public"]["Enums"]["task_ricorrenza"]
+          titolo: string
+          updated_at?: string
+        }
+        Update: {
+          assegnato_a?: string | null
+          attivo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descrizione?: string | null
+          giorni_settimana?: number[]
+          id?: string
+          reparto?: string | null
+          ricorrenza?: Database["public"]["Enums"]["task_ricorrenza"]
+          titolo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       timbrature: {
         Row: {
           created_at: string
@@ -436,6 +525,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_my_tasks: { Args: { _data?: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -454,6 +544,7 @@ export type Database = {
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
       pausa_tipo: "pranzo" | "caffe" | "altro"
       swap_status: "pending" | "approved" | "rejected" | "cancelled"
+      task_ricorrenza: "daily" | "weekly"
       tipo_turno: "mattina" | "pomeriggio" | "sera"
     }
     CompositeTypes: {
@@ -587,6 +678,7 @@ export const Constants = {
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
       pausa_tipo: ["pranzo", "caffe", "altro"],
       swap_status: ["pending", "approved", "rejected", "cancelled"],
+      task_ricorrenza: ["daily", "weekly"],
       tipo_turno: ["mattina", "pomeriggio", "sera"],
     },
   },
