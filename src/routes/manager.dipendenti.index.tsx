@@ -150,30 +150,50 @@ function ListaDipendenti() {
                   <TableCell>{p.ruolo_lavoro || "—"}</TableCell>
                   <TableCell>{p.reparto || "—"}</TableCell>
                   <TableCell className="text-right">
-                    {manager ? (
+                    <div className="flex justify-end gap-1.5 flex-wrap">
+                      {manager ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={self || ownerLocked}
+                          title={
+                            ownerLocked
+                              ? "Solo il proprietario può modificare il proprio ruolo"
+                              : self
+                              ? "Non puoi retrocedere te stesso"
+                              : undefined
+                          }
+                          onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: false })}
+                        >
+                          <ShieldOff className="h-4 w-4 mr-1.5" /> Retrocedi
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: true })}
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-1.5" /> Promuovi a manager
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        disabled={self || ownerLocked}
+                        variant="destructive"
+                        disabled={self || isOwner}
                         title={
-                          ownerLocked
-                            ? "Solo il proprietario può modificare il proprio ruolo"
-                            : self
-                            ? "Non puoi retrocedere te stesso"
-                            : undefined
+                          self
+                            ? "Non puoi eliminare te stesso"
+                            : isOwner
+                            ? "Il proprietario non può essere eliminato"
+                            : "Elimina dal team"
                         }
-                        onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: false })}
+                        onClick={() => {
+                          setDelConfirm("");
+                          setDelTarget({ id: p.id, nome: `${p.nome} ${p.cognome}` });
+                        }}
                       >
-                        <ShieldOff className="h-4 w-4 mr-1.5" /> Retrocedi
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => setTarget({ id: p.id, nome: `${p.nome} ${p.cognome}`, promote: true })}
-                      >
-                        <ShieldCheck className="h-4 w-4 mr-1.5" /> Promuovi a manager
-                      </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
