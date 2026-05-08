@@ -12,8 +12,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, UserPlus, ShieldCheck, ShieldOff } from "lucide-react";
+import { Copy, UserPlus, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { eliminaDipendente } from "@/lib/elimina-dipendente.functions";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/manager/dipendenti/")({
   component: ListaDipendenti,
@@ -23,7 +27,10 @@ function ListaDipendenti() {
   const qc = useQueryClient();
   const [me, setMe] = useState<string | null>(null);
   const [target, setTarget] = useState<{ id: string; nome: string; promote: boolean } | null>(null);
+  const [delTarget, setDelTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [delConfirm, setDelConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const eliminaFn = useServerFn(eliminaDipendente);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
