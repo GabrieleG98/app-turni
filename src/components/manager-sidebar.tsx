@@ -30,11 +30,11 @@ const baseItems = [
   { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
 ];
 
-const ownerExtra = { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog };
+const managerExtra = { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog };
 
 export function ManagerSidebar() {
-  const { signOut, profile, isOwner } = useAuth();
-  const items = isOwner ? [...baseItems, ownerExtra] : baseItems;
+  const { signOut, profile } = useAuth();
+  const items = [...baseItems, managerExtra];
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { setOpenMobile, setOpen } = useSidebar();
   const isMobile = useIsMobile();
