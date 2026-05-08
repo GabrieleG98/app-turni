@@ -40,6 +40,19 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [fotoSalvataUrl, setFotoSalvataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (task?.foto_url) {
+      supabase.storage.from("task-foto").createSignedUrl(task.foto_url, 3600).then(({ data }) => {
+        if (active && data?.signedUrl) setFotoSalvataUrl(data.signedUrl);
+      });
+    } else {
+      setFotoSalvataUrl(null);
+    }
+    return () => { active = false; };
+  }, [task?.foto_url]);
+
   if (!task) return null;
   const done = !!task.completato_at;
 
