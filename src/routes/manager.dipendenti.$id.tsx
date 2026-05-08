@@ -26,8 +26,27 @@ export const Route = createFileRoute("/manager/dipendenti/$id")({
 
 function DettaglioDipendente() {
   const { id } = Route.useParams();
+  const qc = useQueryClient();
   const [inizio, setInizio] = useState(inizioSettimana());
   const fine = addDays(inizio, 6);
+  const [me, setMe] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+  }, []);
+
+  const { data: ruoli = [] } = useQuery({
+    queryKey: ["user_roles"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("user_id, role, created_at")
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+  const ownerId = ruoli.find((r) => r.role === "manager")?.user_id ?? null;
+  const iAmOwner = me !== null && me === ownerId;
 
   const { data: profilo } = useQuery({
     queryKey: ["profile", id],
@@ -36,6 +55,35 @@ function DettaglioDipendente() {
       return data;
     },
   });
+
+  const [ruoloLavoro, setRuoloLavoro] = useState("");
+  const [reparto, setReparto] = useState("");
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profilo && savedKey !== profilo.id) {
+      setRuoloLavoro(profilo.ruolo_lavoro ?? "");
+      setReparto(profilo.reparto ?? "");
+      setSavedKey(profilo.id);
+    }
+  }, [profilo, savedKey]);
+
+  const salvaDatiLavoro = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ ruolo_lavoro: ruoloLavoro.trim(), reparto: reparto.trim() })
+      .eq("id", id);
+    setSaving(false);
+    if (error) {
+      toast.error("Errore salvataggio", { description: error.message });
+    } else {
+      toast.success("Dati lavorativi aggiornati");
+      qc.invalidateQueries({ queryKey: ["profile", id] });
+      qc.invalidateQueries({ queryKey: ["profiles"] });
+    }
+  };
 
   const { data: turni = [] } = useQuery({
     queryKey: ["turni-dip", id, isoData(inizio)],
