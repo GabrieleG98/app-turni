@@ -13,6 +13,7 @@ import { Route as RegistratiRouteImport } from './routes/registrati'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
 
 const RegistratiRoute = RegistratiRouteImport.update({
   id: '/registrati',
@@ -34,38 +35,52 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => ManagerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
+  '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/manager/dashboard': typeof ManagerDashboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
+  '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/manager/dashboard': typeof ManagerDashboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
+  '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
+  '/manager/dashboard': typeof ManagerDashboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/manager' | '/registrati'
+  fullPaths: '/' | '/login' | '/manager' | '/registrati' | '/manager/dashboard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/manager' | '/registrati'
-  id: '__root__' | '/' | '/login' | '/manager' | '/registrati'
+  to: '/' | '/login' | '/manager' | '/registrati' | '/manager/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/manager'
+    | '/registrati'
+    | '/manager/dashboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  ManagerRoute: typeof ManagerRoute
+  ManagerRoute: typeof ManagerRouteWithChildren
   RegistratiRoute: typeof RegistratiRoute
 }
 
@@ -99,13 +114,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/dashboard': {
+      id: '/manager/dashboard'
+      path: '/dashboard'
+      fullPath: '/manager/dashboard'
+      preLoaderRoute: typeof ManagerDashboardRouteImport
+      parentRoute: typeof ManagerRoute
+    }
   }
 }
+
+interface ManagerRouteChildren {
+  ManagerDashboardRoute: typeof ManagerDashboardRoute
+}
+
+const ManagerRouteChildren: ManagerRouteChildren = {
+  ManagerDashboardRoute: ManagerDashboardRoute,
+}
+
+const ManagerRouteWithChildren =
+  ManagerRoute._addFileChildren(ManagerRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  ManagerRoute: ManagerRoute,
+  ManagerRoute: ManagerRouteWithChildren,
   RegistratiRoute: RegistratiRoute,
 }
 export const routeTree = rootRouteImport
