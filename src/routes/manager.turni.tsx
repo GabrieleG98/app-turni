@@ -200,9 +200,30 @@ function GestioneTurni() {
           <h1 className="text-2xl font-bold">Gestione turni</h1>
           <p className="text-sm text-muted-foreground">Vista settimanale</p>
         </div>
-        <Button variant="outline" onClick={() => setCopiaOpen(true)}>
-          <Copy className="h-4 w-4 mr-2" /> Copia settimana precedente
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={() => {
+              if (profili.length === 0) {
+                toast.info("Aggiungi prima un dipendente");
+                return;
+              }
+              setEditing({
+                dipendente_id: profili[0].id,
+                data: isoData(inizio),
+                ora_inizio: "09:00",
+                ora_fine: "13:00",
+                tipo_turno: "mattina",
+                location: "",
+                note: "",
+              });
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" /> Nuovo turno
+          </Button>
+          <Button variant="outline" onClick={() => setCopiaOpen(true)}>
+            <Copy className="h-4 w-4 mr-2" /> Copia settimana precedente
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 flex items-center gap-3">
@@ -286,6 +307,28 @@ function GestioneTurni() {
           </DialogHeader>
           {editing && (
             <div className="space-y-4">
+              {!editing.id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Dipendente</Label>
+                    <Select
+                      value={editing.dipendente_id}
+                      onValueChange={(v) => setEditing({ ...editing, dipendente_id: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {profili.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome} {p.cognome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input type="date" value={editing.data} onChange={(e) => setEditing({ ...editing, data: e.target.value })} />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Tipo turno</Label>
                 <Select
