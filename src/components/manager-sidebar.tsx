@@ -23,6 +23,7 @@ const items = [
   { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
   { title: "Chat", url: "/manager/chat", icon: MessageCircle },
   { title: "Report", url: "/manager/report", icon: FileText },
+  { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
 ];
 
 export function ManagerSidebar() {
