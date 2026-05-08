@@ -1,64 +1,63 @@
-## 1. Più turni nello stesso giorno (manager + notifiche)
+## Piano modifiche
 
-**File principale: `src/routes/manager.turni.tsx`**
+### 1. Timbratura per tutti (manager inclusi)
+- Spostare il pulsante "Timbra" dalla bottom-nav del dipendente in un componente condiviso `TimbraFAB` (Floating Action Button) montato nel layout `manager.tsx` e mantenuto nella bottom-nav `dipendente`.
+- Il manager vedrà il pulsante in basso a destra (FAB) su tutte le pagine `/manager/*`.
+- L'hook `use-timbratura.ts` funziona già a prescindere dal ruolo (usa `auth.uid()`), e le RLS della tabella `timbrature` permettono già a qualsiasi utente autenticato di inserire/aggiornare le proprie timbrature.
 
-Oggi la griglia mostra 1 cella per `dipendente × giorno` e quindi 1 solo turno. Cambio così:
+### 2. Giorno corrente evidenziato in Gestione Turni
+- In `src/routes/manager.turni.tsx`, nelle intestazioni di colonna della griglia turni, applicare uno sfondo `bg-brand` (blu principale) + testo `text-brand-foreground` quando `isoData(giorno) === isoData(new Date())`.
+- Stesso trattamento (più tenue) anche su `dipendente.turni.tsx` per coerenza.
 
-- Sostituisco la logica `turniMap` (Map a singolo valore) con `turniByCell` (Map → array di turni). Ogni cella della griglia diventa una **stack verticale** con tutti i turni di quel giorno per quel dipendente, ognuno cliccabile per modifica.
-- In ogni cella aggiungo in basso un piccolo pulsante **"+ Aggiungi"** che apre il dialog di nuovo turno già pre-compilato con dipendente/data.
-- Il dialog "Nuovo / Modifica turno" resta uguale ma non assume più che esista un solo turno per giorno: l'`apri()` su una cella vuota apre creazione, il click su un turno esistente apre la modifica di quel turno specifico.
-- Layout: ogni turno è una "pill" colorata per fascia (mattina/pomeriggio/sera) con orario + ore totali (vedi punto 5). Le pill sono impilate verticalmente con `gap-1` per restare leggibili anche con 3 turni.
+### 3. Calendario settimanale generale + Eventi mensili
 
-**Notifiche pubblicazione + modifiche:**
+**3a. Nuova voce menù "Calendario" (manager + dipendenti)**
+- Nuova route `src/routes/calendario.tsx` accessibile a entrambi i ruoli.
+- Aggiunta voce nella sidebar manager e nella bottom-nav dipendente (sostituisce/affianca "Tasks" o si aggiunge come 6° tab — da decidere in implementazione, probabilmente come pagina raggiungibile da Profilo o Home per non rompere la nav a 5 voci).
+- Vista settimanale a griglia: righe = dipendenti, colonne = 7 giorni, celle = turni (read-only). Stile pulito, simile alla griglia manager ma senza editing.
+- Pulsante **"Esporta PowerPoint"** visibile a tutti.
 
-Esiste già `notify_turno_pubblicato` (INSERT + UPDATE da non-pubblicato → pubblicato). Aggiungo una funzione `notify_turno_modificato` che notifica al dipendente quando un turno **già pubblicato** viene modificato (orari/data/tipo) o eliminato. Trigger su UPDATE e DELETE della tabella `turni`. Migrazione SQL.
+**3b. Export PowerPoint (slide riassuntiva + dettaglio)**
+- Installare `pptxgenjs`.
+- Genera `.pptx` modificabile con:
+  - Slide 1 (riassuntiva): tabella settimanale completa, intestazioni giorno/data, righe dipendenti, celle con orari + tipo turno colorato.
+  - Slide 2-8 (una per giorno): elenco turni del giorno con orario, dipendente, ruolo, location, ore.
+- Eventi speciali del periodo inclusi nelle slide.
+- Download diretto via `pptx.writeFile()`.
 
-## 2. Pulsante Clock-in / Clock-out sempre accessibile
+**3c. Calendario mensile eventi speciali**
+- Nuova tabella DB `eventi_speciali` con: titolo, descrizione, data, ora_inizio, ora_fine, location, categoria (enum: matrimonio, riunione, evento_privato, altro), colore.
+- RLS: tutti gli autenticati possono leggere; solo manager può insert/update/delete.
+- Nella stessa pagina `/calendario` un toggle Settimana/Mese.
+- Vista mensile: griglia calendario classico, eventi mostrati con il loro colore + icona categoria.
+- Manager: pulsante "+ Aggiungi evento" con dialog (titolo, data, orari, location, categoria, descrizione).
+- Dipendenti: solo lettura, click su evento mostra dettagli in dialog.
 
-Aggiungo nella **bottom nav del dipendente** (`src/components/dipendente-bottom-nav.tsx`) un pulsante centrale grande "Timbra" che:
+### 4. Dettagli tecnici
 
-- Se non hai ancora timbrato → avvia clock-in (stessa logica di `dipendente.index.tsx`).
-- Se sei in turno → avvia clock-out.
-- Mostra lo stato corrente (verde = in turno, grigio = fuori turno).
+**Database (migrazione):**
+```sql
+CREATE TYPE evento_categoria AS ENUM ('matrimonio','riunione','evento_privato','altro');
+CREATE TABLE public.eventi_speciali (
+  id uuid PK default gen_random_uuid(),
+  titolo text NOT NULL,
+  descrizione text,
+  data date NOT NULL,
+  ora_inizio time, ora_fine time,
+  location text,
+  categoria evento_categoria NOT NULL DEFAULT 'altro',
+  colore text NOT NULL DEFAULT '#3b82f6',
+  created_by uuid, created_at, updated_at
+);
+-- RLS: SELECT to authenticated, ALL to manager
+```
 
-Estraggo la logica clock-in/out in un hook `useTimbratura()` riutilizzabile (`src/hooks/use-timbratura.ts`) per non duplicare codice tra home e bottom nav.
+**File toccati:**
+- Nuovi: `src/components/timbra-fab.tsx`, `src/routes/calendario.tsx`, `src/components/calendario-settimanale.tsx`, `src/components/calendario-mensile.tsx`, `src/components/evento-dialog.tsx`, `src/lib/export-pptx.ts`
+- Modificati: `src/routes/manager.tsx` (montaggio FAB), `src/routes/manager.turni.tsx` (highlight oggi), `src/routes/dipendente.turni.tsx` (highlight oggi), `src/components/manager-sidebar.tsx` (voce Calendario), `src/components/dipendente-bottom-nav.tsx` (link a Calendario tramite Profilo o Tasks)
+- Migrazione SQL per `eventi_speciali`
+- `bun add pptxgenjs`
 
-## 3. Esporta in Excel (.xlsx) invece che CSV
-
-**File: `src/routes/manager.report.tsx`**
-
-- Installo `xlsx` (`bun add xlsx`).
-- Sostituisco `esportaCSV` con `esportaExcel`: genera un workbook con header in grassetto, colonne con larghezza adeguata, formattazione numeri (ore con 2 decimali), titolo della settimana nella prima riga.
-- Cambio l'etichetta del bottone in "**Esporta Excel**" e l'icona resta `Download`.
-- Nome file: `report-ore-{settimana}.xlsx`.
-
-## 4. Link di invito brandizzato
-
-- Creo una nuova route alias: `src/routes/unisciti.$token.tsx` (oppure `src/routes/join.tsx`) che renderizza la pagina di registrazione esistente. URL pubblico: **`/unisciti-4fun`** (path leggibile, in italiano, in linea col progetto).
-- Lascio `/registrati` come fallback per retrocompatibilità.
-- Nel manager, aggiungo nella pagina dipendenti un **bottone "Copia link di invito"** che copia negli appunti l'URL completo del progetto + `/unisciti-4fun`. Uso `window.location.origin` così il link riflette automaticamente il dominio pubblicato (es. dominio custom) senza riferimenti a "lovableproject".
-
-## 5. Ore schedulate visibili dentro il turno
-
-Nella griglia `manager.turni.tsx` e nella card di `dipendente.turni.tsx`:
-
-- Calcolo le ore con `oreTraOrari(t.ora_inizio, t.ora_fine, t.data)` (già disponibile in `src/lib/date-utils.ts`).
-- Le mostro in basso a destra del turno con stile **chiaro ma leggibile**: testo piccolo (`text-[10px]`), opacità ridotta (`opacity-70`) su sfondo trasparente, es. `4.0h`. Mantiene il design pulito ma è visibile.
-
-## File toccati
-
-- `src/routes/manager.turni.tsx` — multi-turni per giorno + ore visibili
-- `src/routes/dipendente.turni.tsx` — ore visibili
-- `src/routes/manager.report.tsx` — export Excel
-- `src/routes/manager.dipendenti.index.tsx` — bottone "Copia link invito"
-- `src/components/dipendente-bottom-nav.tsx` — pulsante Timbra
-- `src/hooks/use-timbratura.ts` — nuovo hook condiviso
-- `src/routes/unisciti-4fun.tsx` — nuovo alias di registrazione
-- Migrazione SQL: trigger `notify_turno_modificato` su UPDATE/DELETE di `turni` pubblicati
-- `package.json` — dipendenza `xlsx`
-
-## Note tecniche
-
-- La tabella `turni` non ha vincolo di unicità su `(dipendente_id, data)`, quindi più turni per giorno funzionano già lato DB — il blocco era solo nella UI.
-- Le notifiche realtime arrivano già al dipendente via tabella `notifiche` + canale realtime.
-- Per le notifiche con app **chiusa** servirebbero le Web Push (Service Worker + VAPID): non incluse qui, da pianificare a parte se ti serve.
+**Note:**
+- Notifiche push a app chiusa (Web Push) restano fuori scope, come da discussione precedente.
+- Il pulsante "Timbra" del manager non rimuove quello del dipendente, è solo aggiunto al suo layout.

@@ -147,6 +147,51 @@ export type Database = {
         }
         Relationships: []
       }
+      eventi_speciali: {
+        Row: {
+          categoria: Database["public"]["Enums"]["evento_categoria"]
+          colore: string
+          created_at: string
+          created_by: string | null
+          data: string
+          descrizione: string | null
+          id: string
+          location: string | null
+          ora_fine: string | null
+          ora_inizio: string | null
+          titolo: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: Database["public"]["Enums"]["evento_categoria"]
+          colore?: string
+          created_at?: string
+          created_by?: string | null
+          data: string
+          descrizione?: string | null
+          id?: string
+          location?: string | null
+          ora_fine?: string | null
+          ora_inizio?: string | null
+          titolo: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["evento_categoria"]
+          colore?: string
+          created_at?: string
+          created_by?: string | null
+          data?: string
+          descrizione?: string | null
+          id?: string
+          location?: string | null
+          ora_fine?: string | null
+          ora_inizio?: string | null
+          titolo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifiche: {
         Row: {
           created_at: string
@@ -583,6 +628,7 @@ export type Database = {
       app_role: "manager" | "dipendente"
       chat_canale_tipo: "generale" | "annunci" | "reparto" | "privato"
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
+      evento_categoria: "matrimonio" | "riunione" | "evento_privato" | "altro"
       notifica_tipo: "turno" | "scambio" | "annuncio" | "task" | "generico"
       pausa_tipo: "pranzo" | "caffe" | "altro"
       swap_status: "pending" | "approved" | "rejected" | "cancelled"
@@ -718,6 +764,7 @@ export const Constants = {
       app_role: ["manager", "dipendente"],
       chat_canale_tipo: ["generale", "annunci", "reparto", "privato"],
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
+      evento_categoria: ["matrimonio", "riunione", "evento_privato", "altro"],
       notifica_tipo: ["turno", "scambio", "annuncio", "task", "generico"],
       pausa_tipo: ["pranzo", "caffe", "altro"],
       swap_status: ["pending", "approved", "rejected", "cancelled"],
