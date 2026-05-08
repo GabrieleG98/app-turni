@@ -16,6 +16,7 @@ import { Route as DipendenteRouteImport } from './routes/dipendente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DipendenteIndexRouteImport } from './routes/dipendente.index'
 import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
+import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
@@ -61,6 +62,11 @@ const DipendenteIndexRoute = DipendenteIndexRouteImport.update({
 const ManagerTurniRoute = ManagerTurniRouteImport.update({
   id: '/turni',
   path: '/turni',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const ManagerTasksRoute = ManagerTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => ManagerRoute,
 } as any)
 const ManagerScambiRoute = ManagerScambiRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
+  '/manager/tasks': typeof ManagerTasksRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
+  '/manager/tasks': typeof ManagerTasksRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
+  '/manager/tasks': typeof ManagerTasksRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
+    | '/manager/tasks'
     | '/manager/turni'
     | '/dipendente/'
     | '/manager/dipendenti/$id'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
+    | '/manager/tasks'
     | '/manager/turni'
     | '/dipendente'
     | '/manager/dipendenti/$id'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/manager/dashboard'
     | '/manager/report'
     | '/manager/scambi'
+    | '/manager/tasks'
     | '/manager/turni'
     | '/dipendente/'
     | '/manager/dipendenti/$id'
@@ -298,6 +310,13 @@ declare module '@tanstack/react-router' {
       path: '/turni'
       fullPath: '/manager/turni'
       preLoaderRoute: typeof ManagerTurniRouteImport
+      parentRoute: typeof ManagerRoute
+    }
+    '/manager/tasks': {
+      id: '/manager/tasks'
+      path: '/tasks'
+      fullPath: '/manager/tasks'
+      preLoaderRoute: typeof ManagerTasksRouteImport
       parentRoute: typeof ManagerRoute
     }
     '/manager/scambi': {
@@ -407,6 +426,7 @@ interface ManagerRouteChildren {
   ManagerDashboardRoute: typeof ManagerDashboardRoute
   ManagerReportRoute: typeof ManagerReportRoute
   ManagerScambiRoute: typeof ManagerScambiRoute
+  ManagerTasksRoute: typeof ManagerTasksRoute
   ManagerTurniRoute: typeof ManagerTurniRoute
   ManagerDipendentiIdRoute: typeof ManagerDipendentiIdRoute
   ManagerDipendentiIndexRoute: typeof ManagerDipendentiIndexRoute
@@ -417,6 +437,7 @@ const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerDashboardRoute: ManagerDashboardRoute,
   ManagerReportRoute: ManagerReportRoute,
   ManagerScambiRoute: ManagerScambiRoute,
+  ManagerTasksRoute: ManagerTasksRoute,
   ManagerTurniRoute: ManagerTurniRoute,
   ManagerDipendentiIdRoute: ManagerDipendentiIdRoute,
   ManagerDipendentiIndexRoute: ManagerDipendentiIndexRoute,
@@ -435,3 +456,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
