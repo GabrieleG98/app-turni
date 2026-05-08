@@ -307,6 +307,28 @@ function GestioneTurni() {
           </DialogHeader>
           {editing && (
             <div className="space-y-4">
+              {!editing.id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Dipendente</Label>
+                    <Select
+                      value={editing.dipendente_id}
+                      onValueChange={(v) => setEditing({ ...editing, dipendente_id: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {profili.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome} {p.cognome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input type="date" value={editing.data} onChange={(e) => setEditing({ ...editing, data: e.target.value })} />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Tipo turno</Label>
                 <Select
