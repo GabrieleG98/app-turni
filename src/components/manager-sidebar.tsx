@@ -12,16 +12,17 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange, ClipboardCheck, UserCog } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
-const items = [
+const baseItems = [
   { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard },
   { title: "Turni", url: "/manager/turni", icon: CalendarDays },
   { title: "Calendario", url: "/calendario", icon: CalendarRange },
   { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
+  { title: "Correzioni", url: "/manager/correzioni", icon: ClipboardCheck },
   { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
   { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
   { title: "Chat", url: "/manager/chat", icon: MessageCircle },
@@ -29,8 +30,11 @@ const items = [
   { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
 ];
 
+const ownerExtra = { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog };
+
 export function ManagerSidebar() {
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, isOwner } = useAuth();
+  const items = isOwner ? [...baseItems, ownerExtra] : baseItems;
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { setOpenMobile, setOpen } = useSidebar();
   const isMobile = useIsMobile();

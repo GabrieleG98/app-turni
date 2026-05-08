@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -320,17 +320,7 @@ function CalendarioPage() {
               </div>
             </Card>
 
-            <Card className="p-3">
-              <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Legenda categorie</div>
-              <div className="flex flex-wrap gap-3 text-xs">
-                {(Object.keys(CATEGORIA_LABEL) as Categoria[]).map((c) => (
-                  <div key={c} className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded-full" style={{ background: CATEGORIA_COLORE[c] }} />
-                    {CATEGORIA_LABEL[c]}
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <CategorieLegenda />
           </TabsContent>
         </Tabs>
       </main>
@@ -345,3 +335,96 @@ function CalendarioPage() {
     </div>
   );
 }
+
+function CategorieLegenda() {
+  const { isOwner } = useAuth();
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [nuovoNome, setNuovoNome] = useState("");
+  const [nuovoColore, setNuovoColore] = useState("#3b82f6");
+
+  const { data: categorie = [] } = useQuery({
+    queryKey: ["evento-categorie"],
+    queryFn: async () => {
+      const { data } = await supabase.from("evento_categorie").select("*").order("ordine");
+      return data ?? [];
+    },
+  });
+
+  const aggiungi = async () => {
+    if (!nuovoNome.trim()) return;
+    const { error } = await supabase.from("evento_categorie").insert({
+      nome: nuovoNome.trim(),
+      colore: nuovoColore,
+      ordine: categorie.length + 1,
+    });
+    if (error) { toast.error("Errore", { description: error.message }); return; }
+    toast.success("Categoria aggiunta");
+    setNuovoNome("");
+    setAdding(false);
+    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+  };
+
+  const aggiornaColore = async (id: string, colore: string) => {
+    const { error } = await supabase.from("evento_categorie").update({ colore }).eq("id", id);
+    if (error) { toast.error("Errore", { description: error.message }); return; }
+    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+  };
+
+  const elimina = async (id: string) => {
+    if (!confirm("Eliminare questa categoria?")) return;
+    const { error } = await supabase.from("evento_categorie").delete().eq("id", id);
+    if (error) { toast.error("Errore", { description: error.message }); return; }
+    toast.success("Eliminata");
+    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+  };
+
+  return (
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs font-semibold uppercase text-muted-foreground">Legenda categorie</div>
+        {isOwner && !adding && (
+          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+            <Plus className="h-3 w-3 mr-1" /> Nuova categoria
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        {categorie.map((c) => (
+          <div key={c.id} className="flex items-center gap-1.5 px-2 py-1 rounded border bg-background">
+            {isOwner ? (
+              <input
+                type="color"
+                value={c.colore}
+                onChange={(e) => aggiornaColore(c.id, e.target.value)}
+                className="h-4 w-4 rounded cursor-pointer border-0 p-0"
+                title="Cambia colore"
+              />
+            ) : (
+              <span className="h-3 w-3 rounded-full" style={{ background: c.colore }} />
+            )}
+            <span>{c.nome}</span>
+            {isOwner && (
+              <button onClick={() => elimina(c.id)} className="ml-1 text-muted-foreground hover:text-destructive" aria-label="Elimina">×</button>
+            )}
+          </div>
+        ))}
+      </div>
+      {isOwner && adding && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <input type="color" value={nuovoColore} onChange={(e) => setNuovoColore(e.target.value)} className="h-9 w-9 rounded border-0 cursor-pointer" />
+          <input
+            type="text"
+            value={nuovoNome}
+            onChange={(e) => setNuovoNome(e.target.value)}
+            placeholder="Nome categoria"
+            className="flex-1 min-w-[150px] h-9 px-3 rounded-md border bg-background text-sm"
+          />
+          <Button size="sm" onClick={aggiungi}>Aggiungi</Button>
+          <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Annulla</Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+

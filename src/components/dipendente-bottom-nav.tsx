@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, MessageCircle, ListChecks, User, Home, Play, Square } from "lucide-react";
+import { CalendarDays, MessageCircle, ListChecks, User, Home, Play, Square, Clock } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useTimbratura } from "@/hooks/use-timbratura";
+import { fmtRitardo } from "@/lib/timbra-window";
 
 const items = [
   { to: "/dipendente", label: "Oggi", icon: Home },
@@ -14,11 +15,11 @@ const items = [
 
 export function DipendenteBottomNav() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { inTurno, completato, busy, clockIn, clockOut } = useTimbratura();
+  const { inTurno, completato, busy, clockIn, clockOut, windowState, minutiRitardo, canClock } = useTimbratura();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleTimbra = () => {
-    if (completato) return;
+    if (!canClock || completato) return;
     fileRef.current?.click();
   };
 
@@ -28,6 +29,9 @@ export function DipendenteBottomNav() {
     if (inTurno) clockOut(f);
     else clockIn(f);
   };
+
+  const isLate = !inTurno && windowState === "late";
+  const disabled = busy || !canClock || completato;
 
   return (
     <>
@@ -52,26 +56,30 @@ export function DipendenteBottomNav() {
               <button
                 type="button"
                 onClick={handleTimbra}
-                disabled={busy || completato}
+                disabled={disabled}
                 className={cn(
-                  "-mt-6 h-16 w-16 rounded-full shadow-lg shadow-brand/30 flex flex-col items-center justify-center text-[10px] font-semibold transition-all",
-                  completato
-                    ? "bg-muted text-muted-foreground"
+                  "-mt-6 h-16 w-16 rounded-full shadow-lg flex flex-col items-center justify-center text-[10px] font-semibold transition-all",
+                  disabled
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
                     : inTurno
-                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    : "bg-brand-gradient text-brand-foreground hover:opacity-95",
-                  busy && "opacity-60",
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-destructive/30"
+                    : isLate
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-destructive/40 animate-pulse"
+                    : "bg-brand-gradient text-brand-foreground hover:opacity-95 shadow-brand/30",
                 )}
-                aria-label={inTurno ? "Termina turno" : "Inizia turno"}
+                aria-label={completato ? "Turno completato" : inTurno ? "Termina turno" : "Inizia turno"}
               >
-                {inTurno ? (
-                  <Square className="h-6 w-6 fill-current" />
+                {completato ? (
+                  <span className="text-[10px] font-medium">✓</span>
+                ) : inTurno ? (
+                  <Square className="h-5 w-5 fill-current" />
+                ) : windowState === "too-early" || windowState === "no-shift" ? (
+                  <Clock className="h-5 w-5" />
                 ) : (
-                  <Play className="h-6 w-6 fill-current" />
+                  <Play className="h-5 w-5 fill-current" />
                 )}
-                <span className="mt-0.5">
-                  {completato ? "Fatto" : inTurno ? "Stop" : "Timbra"}
-                </span>
+                <span className="mt-0.5">{completato ? "OK" : inTurno ? "Stop" : "Timbra"}</span>
+                {isLate && <span className="text-[9px] font-bold">{fmtRitardo(minutiRitardo)}</span>}
               </button>
             </li>
             {items.slice(2).map((it) => (

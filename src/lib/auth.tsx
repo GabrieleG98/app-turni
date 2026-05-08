@@ -18,6 +18,7 @@ interface AuthCtx {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  isOwner: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -30,16 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadUserData = async (uid: string) => {
-    const [{ data: prof }, { data: roles }] = await Promise.all([
+    const [{ data: prof }, { data: roles }, { data: ownerRes }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.rpc("is_owner", { _uid: uid }),
     ]);
     setProfile((prof as Profile) ?? null);
     const r = roles?.[0]?.role as AppRole | undefined;
     setRole(r ?? null);
+    setIsOwner(Boolean(ownerRes));
   };
 
   useEffect(() => {
@@ -51,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setRole(null);
+        setIsOwner(false);
       }
     });
 
@@ -75,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user, session, profile, role, loading, signOut, refresh }}>
+    <Ctx.Provider value={{ user, session, profile, role, isOwner, loading, signOut, refresh }}>
       {children}
     </Ctx.Provider>
   );
