@@ -1,28 +1,58 @@
-## Obiettivo
-Permettere a un manager (es. te) di promuovere altri utenti a manager (es. il tuo team manager e la responsabile miniclub) o retrocederli a dipendenti, direttamente dalla pagina **/manager/dipendenti**. I nuovi manager avranno gli stessi identici permessi attuali: creare, modificare ed eliminare turni, gestire timbrature, chat, task, ecc.
+## Risposta sulla chat
+Stato attuale dei canali:
+- **#Generale** — tutti (manager e dipendenti) leggono e scrivono liberamente.
+- **#Annunci** — tutti leggono, ma solo i manager possono scrivere (è pensato per comunicazioni ufficiali).
 
-## Modifiche
+Se vuoi che **anche su Annunci** scrivano tutti dimmelo e tolgo la restrizione. Altrimenti lascio com'è: è il comportamento standard di una bacheca aziendale.
 
-### 1. Database
-Nessuna modifica di schema: la tabella `user_roles` e la policy "Manager gestisce ruoli" già consentono ai manager di inserire/eliminare ruoli.
+## Proteggere te (proprietario) dalle retrocessioni
 
-Aggiungere una funzione SQL `set_user_role(_user_id uuid, _role app_role)` (SECURITY DEFINER) che:
-- verifica che il chiamante sia manager;
-- impedisce a un manager di retrocedere sé stesso (per evitare di restare senza alcun manager);
-- sostituisce in modo atomico il ruolo dell'utente target (delete + insert).
+### Obiettivo
+Tu, primo utente registrato (Gabriele Genna), devi risultare **intoccabile**: nessun altro manager può retrocederti, cambiarti ruolo, né eliminare il tuo profilo. Tu invece mantieni il pieno controllo su tutti gli altri.
 
-### 2. UI — `src/routes/manager.dipendenti.index.tsx`
-- Mostrare per ogni dipendente un **badge con il ruolo attuale** (Manager / Dipendente).
-- Aggiungere un pulsante azione contestuale:
-  - **"Promuovi a manager"** se l'utente è dipendente
-  - **"Retrocedi a dipendente"** se è manager (disabilitato sulla riga dell'utente loggato)
-- Conferma tramite `AlertDialog` prima di applicare il cambio.
-- Toast di esito + refresh automatico della lista.
+### Identificazione del proprietario
+Il proprietario è il manager più "vecchio" — l'utente con il record `user_roles` di ruolo `manager` con `created_at` minimo. Con la funzione SECURITY DEFINER `is_owner(uid)` evitiamo qualunque rischio di ricorsione RLS.
 
-### 3. Caricamento dati
-Estendere la query dei profili per includere anche i ruoli (lettura aggiuntiva da `user_roles`) così da mostrare il badge corretto e decidere quale azione mostrare.
+```sql
+create or replace function public.is_owner(_uid uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select _uid = (
+    select user_id from public.user_roles
+    where role = 'manager'
+    order by created_at asc limit 1
+  );
+$$;
+```
 
-## Note
-- Nessuna modifica ai flussi di registrazione: il primo utente resta automaticamente manager, gli altri restano dipendenti finché non vengono promossi.
-- Tutti i permessi (turni, scambi, timbrature, report, chat annunci, task template, notifiche) sono già governati da `has_role(uid, 'manager')`: una volta promossi, i nuovi manager avranno automaticamente accesso completo come te.
-- Nessun impatto su RLS, chat, notifiche o turni esistenti.
+### Modifiche
+
+**1. `set_user_role` — blocco operazioni sul proprietario**
+Aggiorno la funzione esistente: se `_user_id` è il proprietario e il chiamante NON è il proprietario, solleva eccezione "Non puoi modificare il ruolo del proprietario dell'app".
+
+**2. RLS su `user_roles`**
+Sostituisco la policy "Manager gestisce ruoli" (oggi un ALL aperto a tutti i manager) con due policy mirate:
+- INSERT/UPDATE/DELETE consentito ai manager **solo se la riga target non appartiene al proprietario**, oppure se il chiamante stesso è il proprietario.
+- SELECT invariato.
+
+Questo chiude anche la strada a un manager che provasse a eliminare direttamente la riga `user_roles` del proprietario bypassando l'RPC.
+
+**3. RLS su `profiles`**
+Le policy "Manager modifica profili" e "Manager elimina profili" diventano:
+- Update/Delete permessi ai manager **a meno che** il target sia il proprietario, salvo che il chiamante sia il proprietario stesso.
+Così nessuno può cancellare/modificare il tuo profilo all'insaputa.
+
+**4. UI — `src/routes/manager.dipendenti.index.tsx`**
+- Carico l'id del proprietario (una query: prima riga `user_roles` manager per `created_at`).
+- Sulla riga del proprietario:
+  - badge **"Proprietario"** (oltre a "Manager") con stile distintivo.
+  - pulsante "Retrocedi" **disabilitato** per chiunque non sia il proprietario, con tooltip "Solo il proprietario può modificare il proprio ruolo".
+- Mantengo invariata la regola: il proprietario non può retrocedere sé stesso (già prevista).
+
+### Cosa NON cambia
+- Flusso di registrazione: il primo utente continua a diventare manager automaticamente (= proprietario).
+- Permessi operativi degli altri manager su turni, timbrature, task, chat, scambi, report: invariati.
+- Nessun nuovo campo nel database: il proprietario è dedotto dinamicamente, niente flag manuali da gestire.
+
+### File toccati
+- nuova migration: funzione `is_owner`, aggiornamento `set_user_role`, nuove policy RLS su `user_roles` e `profiles`.
+- `src/routes/manager.dipendenti.index.tsx`: badge e disabilitazione pulsante.
