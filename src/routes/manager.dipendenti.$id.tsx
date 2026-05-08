@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   fmtData,
   fmtOre,
@@ -12,11 +14,11 @@ import {
   inizioSettimana,
   isoData,
   oreTimbratura,
-  oreTraOrari,
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
