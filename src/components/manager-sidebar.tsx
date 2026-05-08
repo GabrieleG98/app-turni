@@ -10,8 +10,10 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
@@ -29,13 +31,19 @@ const items = [
 export function ManagerSidebar() {
   const { signOut, profile } = useAuth();
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const { setOpenMobile, setOpen } = useSidebar();
+  const isMobile = useIsMobile();
+  const closeSidebar = () => {
+    if (isMobile) setOpenMobile(false);
+    else setOpen(false);
+  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center gap-2 font-semibold leading-tight">
           <Hotel className="h-5 w-5 text-primary shrink-0" />
-          <span className="truncate">Schedule Timi Ama 4Fun</span>
+          <span className="truncate">Turni Staff 4FUN - Timi Ama</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -46,7 +54,7 @@ export function ManagerSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={path.startsWith(item.url)}>
-                    <Link to={item.url} className="flex items-center gap-2">
+                    <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
