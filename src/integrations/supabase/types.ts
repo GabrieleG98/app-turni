@@ -150,6 +150,7 @@ export type Database = {
       eventi_speciali: {
         Row: {
           categoria: Database["public"]["Enums"]["evento_categoria"]
+          categoria_id: string | null
           colore: string
           created_at: string
           created_by: string | null
@@ -164,6 +165,7 @@ export type Database = {
         }
         Insert: {
           categoria?: Database["public"]["Enums"]["evento_categoria"]
+          categoria_id?: string | null
           colore?: string
           created_at?: string
           created_by?: string | null
@@ -178,6 +180,7 @@ export type Database = {
         }
         Update: {
           categoria?: Database["public"]["Enums"]["evento_categoria"]
+          categoria_id?: string | null
           colore?: string
           created_at?: string
           created_by?: string | null
@@ -188,6 +191,44 @@ export type Database = {
           ora_fine?: string | null
           ora_inizio?: string | null
           titolo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventi_speciali_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "evento_categorie"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evento_categorie: {
+        Row: {
+          colore: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          ordine: number
+          updated_at: string
+        }
+        Insert: {
+          colore?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          ordine?: number
+          updated_at?: string
+        }
+        Update: {
+          colore?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          ordine?: number
           updated_at?: string
         }
         Relationships: []
@@ -450,6 +491,65 @@ export type Database = {
           },
         ]
       }
+      timbrature_correzioni: {
+        Row: {
+          created_at: string
+          data: string
+          decisione_at: string | null
+          decisione_di: string | null
+          dipendente_id: string
+          id: string
+          motivo: string
+          note_manager: string | null
+          orario_richiesto_in: string | null
+          orario_richiesto_out: string | null
+          status: Database["public"]["Enums"]["correzione_status"]
+          timbratura_id: string | null
+          tipo: Database["public"]["Enums"]["correzione_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          decisione_at?: string | null
+          decisione_di?: string | null
+          dipendente_id: string
+          id?: string
+          motivo: string
+          note_manager?: string | null
+          orario_richiesto_in?: string | null
+          orario_richiesto_out?: string | null
+          status?: Database["public"]["Enums"]["correzione_status"]
+          timbratura_id?: string | null
+          tipo: Database["public"]["Enums"]["correzione_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          decisione_at?: string | null
+          decisione_di?: string | null
+          dipendente_id?: string
+          id?: string
+          motivo?: string
+          note_manager?: string | null
+          orario_richiesto_in?: string | null
+          orario_richiesto_out?: string | null
+          status?: Database["public"]["Enums"]["correzione_status"]
+          timbratura_id?: string | null
+          tipo?: Database["public"]["Enums"]["correzione_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timbrature_correzioni_timbratura_id_fkey"
+            columns: ["timbratura_id"]
+            isOneToOne: false
+            referencedRelation: "timbrature"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turni: {
         Row: {
           created_at: string
@@ -627,6 +727,12 @@ export type Database = {
     Enums: {
       app_role: "manager" | "dipendente"
       chat_canale_tipo: "generale" | "annunci" | "reparto" | "privato"
+      correzione_status: "pending" | "approved" | "rejected"
+      correzione_tipo:
+        | "mancata_clock_in"
+        | "mancata_clock_out"
+        | "orario_errato"
+        | "altro"
       disponibilita_tipo: "disponibile" | "non_disponibile" | "preferito"
       evento_categoria: "matrimonio" | "riunione" | "evento_privato" | "altro"
       notifica_tipo: "turno" | "scambio" | "annuncio" | "task" | "generico"
@@ -763,6 +869,13 @@ export const Constants = {
     Enums: {
       app_role: ["manager", "dipendente"],
       chat_canale_tipo: ["generale", "annunci", "reparto", "privato"],
+      correzione_status: ["pending", "approved", "rejected"],
+      correzione_tipo: [
+        "mancata_clock_in",
+        "mancata_clock_out",
+        "orario_errato",
+        "altro",
+      ],
       disponibilita_tipo: ["disponibile", "non_disponibile", "preferito"],
       evento_categoria: ["matrimonio", "riunione", "evento_privato", "altro"],
       notifica_tipo: ["turno", "scambio", "annuncio", "task", "generico"],
