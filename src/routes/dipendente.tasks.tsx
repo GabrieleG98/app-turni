@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { fmtData, isoData } from "@/lib/date-utils";
-import { ListChecks, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
+import { ListChecks, CheckCircle2, Camera, ChevronRight } from "lucide-react";
+import { TaskDettaglioDialog } from "@/components/task-dettaglio-dialog";
 
 export const Route = createFileRoute("/dipendente/tasks")({
   component: Tasks,
@@ -17,8 +16,8 @@ function Tasks() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const oggi = isoData(new Date());
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
-  // Genera task di oggi (idempotente)
   useEffect(() => {
     if (!user) return;
     supabase.rpc("ensure_my_tasks", { _data: oggi }).then(() => {
@@ -32,7 +31,7 @@ function Tasks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("task_assegnati")
-        .select("*")
+        .select("*, template:task_template(richiede_foto)")
         .eq("data", oggi)
         .order("titolo", { ascending: true });
       if (error) throw error;
@@ -40,23 +39,16 @@ function Tasks() {
     },
   });
 
-  const toggle = async (id: string, completato: boolean) => {
-    const { error } = await supabase
-      .from("task_assegnati")
-      .update({ completato_at: completato ? new Date().toISOString() : null })
-      .eq("id", id);
-    if (error) return toast.error("Errore", { description: error.message });
-    qc.invalidateQueries({ queryKey: ["miei-task", oggi] });
-  };
-
-  const fatti = tasks.filter((t) => t.completato_at).length;
+  const fatti = tasks.filter((t: any) => t.completato_at).length;
   const tot = tasks.length;
   const tutto = tot > 0 && fatti === tot;
+  const openTask = tasks.find((t: any) => t.id === openTaskId) ?? null;
+  const richiedeFoto = (openTask?.template as any)?.richiede_foto ?? false;
 
   return (
     <>
       <header className="bg-brand-gradient text-brand-foreground rounded-b-3xl">
-        <div className="max-w-md mx-auto px-5 pt-8 pb-8">
+        <div className="max-w-md mx-auto px-5 pt-6 pb-8">
           <h1 className="text-2xl font-bold">Tasks</h1>
           <p className="text-sm opacity-90 mt-1 capitalize">
             {fmtData(new Date(), "EEEE d MMMM")} · {fatti}/{tot} completati
@@ -67,10 +59,7 @@ function Tasks() {
       <main className="max-w-md mx-auto px-4 -mt-4 space-y-3 pb-8">
         {tot > 0 && (
           <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-brand-gradient transition-all"
-              style={{ width: `${(fatti / tot) * 100}%` }}
-            />
+            <div className="h-full bg-brand-gradient transition-all" style={{ width: `${(fatti / tot) * 100}%` }} />
           </div>
         )}
 
@@ -86,27 +75,32 @@ function Tasks() {
           </Card>
         ) : (
           <ul className="space-y-2">
-            {tasks.map((t) => {
+            {tasks.map((t: any) => {
               const done = !!t.completato_at;
+              const needsPhoto = (t.template as any)?.richiede_foto;
               return (
                 <li key={t.id}>
-                  <Card
-                    className={`p-3 flex items-start gap-3 border-0 shadow-sm transition ${
-                      done ? "opacity-60" : ""
-                    }`}
+                  <button
+                    type="button"
+                    onClick={() => setOpenTaskId(t.id)}
+                    className="w-full text-left"
                   >
-                    <Checkbox
-                      checked={done}
-                      onCheckedChange={(v) => toggle(t.id, !!v)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-medium ${done ? "line-through" : ""}`}>{t.titolo}</div>
-                      {t.descrizione && (
-                        <div className="text-xs text-muted-foreground mt-0.5">{t.descrizione}</div>
-                      )}
-                    </div>
-                  </Card>
+                    <Card className={`p-3 flex items-center gap-3 border-0 shadow-sm transition hover:bg-accent/40 ${done ? "opacity-60" : ""}`}>
+                      <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${done ? "bg-green-500/20 text-green-600" : "bg-brand-soft text-brand"}`}>
+                        {done ? <CheckCircle2 className="h-5 w-5" /> : <ListChecks className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-medium truncate ${done ? "line-through" : ""}`}>{t.titolo}</div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          {needsPhoto && (
+                            <span className="inline-flex items-center gap-1"><Camera className="h-3 w-3" /> Foto richiesta</span>
+                          )}
+                          {t.descrizione && !needsPhoto && <span className="truncate">{t.descrizione}</span>}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </Card>
+                  </button>
                 </li>
               );
             })}
@@ -120,6 +114,13 @@ function Tasks() {
           </Card>
         )}
       </main>
+
+      <TaskDettaglioDialog
+        task={openTask}
+        richiedeFoto={richiedeFoto}
+        onClose={() => setOpenTaskId(null)}
+        invalidateKey={["miei-task", oggi]}
+      />
     </>
   );
 }

@@ -350,6 +350,7 @@ export type Database = {
           data: string
           descrizione: string | null
           dipendente_id: string
+          foto_url: string | null
           id: string
           note: string | null
           template_id: string | null
@@ -362,6 +363,7 @@ export type Database = {
           data: string
           descrizione?: string | null
           dipendente_id: string
+          foto_url?: string | null
           id?: string
           note?: string | null
           template_id?: string | null
@@ -374,6 +376,7 @@ export type Database = {
           data?: string
           descrizione?: string | null
           dipendente_id?: string
+          foto_url?: string | null
           id?: string
           note?: string | null
           template_id?: string | null
@@ -400,6 +403,7 @@ export type Database = {
           giorni_settimana: number[]
           id: string
           reparto: string | null
+          richiede_foto: boolean
           ricorrenza: Database["public"]["Enums"]["task_ricorrenza"]
           titolo: string
           updated_at: string
@@ -413,6 +417,7 @@ export type Database = {
           giorni_settimana?: number[]
           id?: string
           reparto?: string | null
+          richiede_foto?: boolean
           ricorrenza?: Database["public"]["Enums"]["task_ricorrenza"]
           titolo: string
           updated_at?: string
@@ -426,6 +431,7 @@ export type Database = {
           giorni_settimana?: number[]
           id?: string
           reparto?: string | null
+          richiede_foto?: boolean
           ricorrenza?: Database["public"]["Enums"]["task_ricorrenza"]
           titolo?: string
           updated_at?: string

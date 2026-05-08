@@ -33,6 +33,7 @@ import { Route as DipendenteDisponibilitaRouteImport } from './routes/dipendente
 import { Route as DipendenteChatRouteImport } from './routes/dipendente.chat'
 import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
 import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
+import { Route as ApiPublicHooksTaskReminderRouteImport } from './routes/api/public/hooks/task-reminder'
 
 const Unisciti4funRoute = Unisciti4funRouteImport.update({
   id: '/unisciti-4fun',
@@ -154,6 +155,12 @@ const ManagerDipendentiIdRoute = ManagerDipendentiIdRouteImport.update({
   path: '/dipendenti/$id',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ApiPublicHooksTaskReminderRoute =
+  ApiPublicHooksTaskReminderRouteImport.update({
+    id: '/api/public/hooks/task-reminder',
+    path: '/api/public/hooks/task-reminder',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
   '/manager/dipendenti/': typeof ManagerDipendentiIndexRoute
+  '/api/public/hooks/task-reminder': typeof ApiPublicHooksTaskReminderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -205,6 +213,7 @@ export interface FileRoutesByTo {
   '/dipendente': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
   '/manager/dipendenti': typeof ManagerDipendentiIndexRoute
+  '/api/public/hooks/task-reminder': typeof ApiPublicHooksTaskReminderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -232,6 +241,7 @@ export interface FileRoutesById {
   '/dipendente/': typeof DipendenteIndexRoute
   '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
   '/manager/dipendenti/': typeof ManagerDipendentiIndexRoute
+  '/api/public/hooks/task-reminder': typeof ApiPublicHooksTaskReminderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/dipendente/'
     | '/manager/dipendenti/$id'
     | '/manager/dipendenti/'
+    | '/api/public/hooks/task-reminder'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/dipendente'
     | '/manager/dipendenti/$id'
     | '/manager/dipendenti'
+    | '/api/public/hooks/task-reminder'
   id:
     | '__root__'
     | '/'
@@ -311,6 +323,7 @@ export interface FileRouteTypes {
     | '/dipendente/'
     | '/manager/dipendenti/$id'
     | '/manager/dipendenti/'
+    | '/api/public/hooks/task-reminder'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -321,6 +334,7 @@ export interface RootRouteChildren {
   ManagerRoute: typeof ManagerRouteWithChildren
   RegistratiRoute: typeof RegistratiRoute
   Unisciti4funRoute: typeof Unisciti4funRoute
+  ApiPublicHooksTaskReminderRoute: typeof ApiPublicHooksTaskReminderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -493,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDipendentiIdRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/api/public/hooks/task-reminder': {
+      id: '/api/public/hooks/task-reminder'
+      path: '/api/public/hooks/task-reminder'
+      fullPath: '/api/public/hooks/task-reminder'
+      preLoaderRoute: typeof ApiPublicHooksTaskReminderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -557,6 +578,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerRoute: ManagerRouteWithChildren,
   RegistratiRoute: RegistratiRoute,
   Unisciti4funRoute: Unisciti4funRoute,
+  ApiPublicHooksTaskReminderRoute: ApiPublicHooksTaskReminderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
