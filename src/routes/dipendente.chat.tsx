@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "@/components/ui/card";
-import { MessageCircle } from "lucide-react";
+import { ChatView } from "@/components/chat-view";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/dipendente/chat")({
   component: Chat,
 });
 
 function Chat() {
+  const { roles } = useAuth();
+  const isManager = roles?.includes("manager") ?? false;
   return (
     <>
       <header className="bg-brand-gradient text-brand-foreground rounded-b-3xl">
@@ -15,14 +17,8 @@ function Chat() {
           <p className="text-sm opacity-90 mt-1">Comunica col team</p>
         </div>
       </header>
-      <main className="max-w-md mx-auto px-4 -mt-4">
-        <Card className="p-8 text-center border-0 shadow-sm">
-          <MessageCircle className="h-10 w-10 text-brand mx-auto mb-3" />
-          <div className="font-semibold">Chat di team in arrivo</div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Presto potrai chattare con il tuo team e ricevere annunci dal manager.
-          </p>
-        </Card>
+      <main className="max-w-3xl mx-auto px-3 -mt-4 pb-4">
+        <ChatView isManager={isManager} />
       </main>
     </>
   );
