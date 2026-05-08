@@ -24,9 +24,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, ListChecks, Camera } from "lucide-react";
-import { isoData } from "@/lib/date-utils";
-import { useEffect, useState as useStateImg } from "react";
+import { Plus, Trash2, ListChecks, Camera, CheckCircle2 } from "lucide-react";
+import { isoData, fmtData } from "@/lib/date-utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/tasks")({
