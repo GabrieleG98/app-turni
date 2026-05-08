@@ -13,7 +13,10 @@ import { Route as RegistratiRouteImport } from './routes/registrati'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
+import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
+import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
 
 const RegistratiRoute = RegistratiRouteImport.update({
   id: '/registrati',
@@ -35,9 +38,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerTurniRoute = ManagerTurniRouteImport.update({
+  id: '/turni',
+  path: '/turni',
+  getParentRoute: () => ManagerRoute,
+} as any)
 const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const ManagerDipendentiIndexRoute = ManagerDipendentiIndexRouteImport.update({
+  id: '/dipendenti/',
+  path: '/dipendenti/',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const ManagerDipendentiIdRoute = ManagerDipendentiIdRouteImport.update({
+  id: '/dipendenti/$id',
+  path: '/dipendenti/$id',
   getParentRoute: () => ManagerRoute,
 } as any)
 
@@ -47,6 +65,9 @@ export interface FileRoutesByFullPath {
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/turni': typeof ManagerTurniRoute
+  '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
+  '/manager/dipendenti/': typeof ManagerDipendentiIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +75,9 @@ export interface FileRoutesByTo {
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/turni': typeof ManagerTurniRoute
+  '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
+  '/manager/dipendenti': typeof ManagerDipendentiIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +86,31 @@ export interface FileRoutesById {
   '/manager': typeof ManagerRouteWithChildren
   '/registrati': typeof RegistratiRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
+  '/manager/turni': typeof ManagerTurniRoute
+  '/manager/dipendenti/$id': typeof ManagerDipendentiIdRoute
+  '/manager/dipendenti/': typeof ManagerDipendentiIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/manager' | '/registrati' | '/manager/dashboard'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/manager'
+    | '/registrati'
+    | '/manager/dashboard'
+    | '/manager/turni'
+    | '/manager/dipendenti/$id'
+    | '/manager/dipendenti/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/manager' | '/registrati' | '/manager/dashboard'
+  to:
+    | '/'
+    | '/login'
+    | '/manager'
+    | '/registrati'
+    | '/manager/dashboard'
+    | '/manager/turni'
+    | '/manager/dipendenti/$id'
+    | '/manager/dipendenti'
   id:
     | '__root__'
     | '/'
@@ -75,6 +118,9 @@ export interface FileRouteTypes {
     | '/manager'
     | '/registrati'
     | '/manager/dashboard'
+    | '/manager/turni'
+    | '/manager/dipendenti/$id'
+    | '/manager/dipendenti/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -114,6 +160,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/turni': {
+      id: '/manager/turni'
+      path: '/turni'
+      fullPath: '/manager/turni'
+      preLoaderRoute: typeof ManagerTurniRouteImport
+      parentRoute: typeof ManagerRoute
+    }
     '/manager/dashboard': {
       id: '/manager/dashboard'
       path: '/dashboard'
@@ -121,15 +174,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDashboardRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/dipendenti/': {
+      id: '/manager/dipendenti/'
+      path: '/dipendenti'
+      fullPath: '/manager/dipendenti/'
+      preLoaderRoute: typeof ManagerDipendentiIndexRouteImport
+      parentRoute: typeof ManagerRoute
+    }
+    '/manager/dipendenti/$id': {
+      id: '/manager/dipendenti/$id'
+      path: '/dipendenti/$id'
+      fullPath: '/manager/dipendenti/$id'
+      preLoaderRoute: typeof ManagerDipendentiIdRouteImport
+      parentRoute: typeof ManagerRoute
+    }
   }
 }
 
 interface ManagerRouteChildren {
   ManagerDashboardRoute: typeof ManagerDashboardRoute
+  ManagerTurniRoute: typeof ManagerTurniRoute
+  ManagerDipendentiIdRoute: typeof ManagerDipendentiIdRoute
+  ManagerDipendentiIndexRoute: typeof ManagerDipendentiIndexRoute
 }
 
 const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerDashboardRoute: ManagerDashboardRoute,
+  ManagerTurniRoute: ManagerTurniRoute,
+  ManagerDipendentiIdRoute: ManagerDipendentiIdRoute,
+  ManagerDipendentiIndexRoute: ManagerDipendentiIndexRoute,
 }
 
 const ManagerRouteWithChildren =
