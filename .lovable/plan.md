@@ -1,64 +1,28 @@
-# Piano: completamento "Schedule Timi Ama 4Fun" (PWA installabile + funzionalità Homebase)
+## Obiettivo
+Permettere a un manager (es. te) di promuovere altri utenti a manager (es. il tuo team manager e la responsabile miniclub) o retrocederli a dipendenti, direttamente dalla pagina **/manager/dipendenti**. I nuovi manager avranno gli stessi identici permessi attuali: creare, modificare ed eliminare turni, gestire timbrature, chat, task, ecc.
 
-Mantengo la PWA installabile come già fatto (manifest, icone, theme-color, meta `apple-mobile-web-app-*`). Procedo con le epiche funzionali.
+## Modifiche
 
-## Epica 2 — Scheduling avanzato (manager)
+### 1. Database
+Nessuna modifica di schema: la tabella `user_roles` e la policy "Manager gestisce ruoli" già consentono ai manager di inserire/eliminare ruoli.
 
-- **Vista settimana** in `/manager/turni`: griglia dipendenti × giorni
-  - Tap cella vuota → dialog crea turno (orario, tipo, location, note)
-  - Tap turno esistente → modifica/elimina
-  - Drag & drop su desktop per spostare un turno; su mobile menù "Sposta a…"
-  - Selettore settimana precedente/successiva
-- **Template settimanali**: tabella `turni_template` (nome + payload JSON), bottoni "Salva come template" e "Applica template"
-- **Pubblicazione settimana**: campo `pubblicato` su `turni`; i dipendenti vedono solo i pubblicati; bottone "Pubblica settimana"
-- **Swap turni**: tabella `turno_swap_requests` (turno, da, a, stato); lista pendenti nella dashboard manager con approva/rifiuta
-- **Disponibilità dipendenti**: tabella `disponibilita` (giorno_settimana, fascia, tipo); pagina dipendente "Le mie disponibilità"; avviso al manager se assegna fuori fascia
+Aggiungere una funzione SQL `set_user_role(_user_id uuid, _role app_role)` (SECURITY DEFINER) che:
+- verifica che il chiamante sia manager;
+- impedisce a un manager di retrocedere sé stesso (per evitare di restare senza alcun manager);
+- sostituisce in modo atomico il ruolo dell'utente target (delete + insert).
 
-## Epica 3 — Time clock evoluto (dipendente)
+### 2. UI — `src/routes/manager.dipendenti.index.tsx`
+- Mostrare per ogni dipendente un **badge con il ruolo attuale** (Manager / Dipendente).
+- Aggiungere un pulsante azione contestuale:
+  - **"Promuovi a manager"** se l'utente è dipendente
+  - **"Retrocedi a dipendente"** se è manager (disabilitato sulla riga dell'utente loggato)
+- Conferma tramite `AlertDialog` prima di applicare il cambio.
+- Toast di esito + refresh automatico della lista.
 
-- **GPS opzionale** alla timbratura: salvo `lat/lng` via Geolocation API
-- **Foto opzionale** (selfie): `<input capture="user">`, upload su bucket Storage `timbrature-foto`, link salvato sulla timbratura
-- **Pause**: tabella `pause` (timbratura_id, inizio, fine) con bottoni "Inizia/Termina pausa"
-- **Straordinari**: differenza ore lavorate vs pianificate, mostrata in timbratura e report
-- Aggiungo `lat`, `lng`, `foto_url` a `timbrature`
-- Nuovo bucket `timbrature-foto` con RLS (dipendente upload propri, manager lettura tutti)
+### 3. Caricamento dati
+Estendere la query dei profili per includere anche i ruoli (lettura aggiuntiva da `user_roles`) così da mostrare il badge corretto e decidere quale azione mostrare.
 
-## Epica 4 — Team communication
-
-- **Tabelle**: `chat_canali` (nome, tipo: gruppo/diretto/annunci), `chat_membri`, `chat_messaggi`
-- **Realtime** Supabase su `chat_messaggi` (postgres_changes)
-- **UI dipendente** (`/dipendente/chat`): lista canali + conversazione mobile con input in fondo
-- **UI manager**: crea canali, aggiunge membri, sezione "Annunci" (read-only per dipendenti, scrive solo manager)
-- RLS: vedi/scrivi solo nei canali in cui sei membro
-
-## Epica 5 — Task management
-
-- **Tabelle**: `task_template` (titolo, descrizione, ruolo/reparto, ricorrenza giornaliera/settimanale), `task_assegnati` (template, dipendente, data, completato, completato_at)
-- **Generazione automatica** dei task del giorno via server function al primo accesso
-- **UI dipendente** (`/dipendente/tasks`): checklist con tap-per-completare
-- **UI manager**: CRUD template + vista "completamento di oggi" per dipendente/reparto
-
-## Epica 6 — Rifiniture trasversali
-
-- **Inviti dipendenti** via email: server function admin che crea utente + ruolo dipendente + magic link
-- **Notifiche in-app**: bell icon con contatore (turno pubblicato, nuovo messaggio, nuovo task)
-- **Report manager esteso**: ore lavorate, straordinari, assenze, completamento task, export CSV
-- **Dark mode** automatica via `prefers-color-scheme` (token già pronti)
-
-## Architettura tecnica
-
-- Tutta la logica server in `createServerFn` con `requireSupabaseAuth` (no Edge Functions)
-- Realtime chat: client browser Supabase + canali postgres_changes
-- Storage: bucket `timbrature-foto` con RLS
-- Migration SQL in step separati per epica → ogni epica testabile da sola
-- PWA: resta come già configurata, niente service worker custom
-
-## Ordine di consegna
-
-1. **Epica 2** — scheduling avanzato (drag & drop, template, pubblicazione, swap, disponibilità)
-2. **Epica 3** — time clock evoluto (GPS, foto, pause, straordinari)
-3. **Epica 4** — chat realtime
-4. **Epica 5** — task & checklist
-5. **Epica 6** — rifiniture (inviti, notifiche in-app, report CSV, dark mode)
-
-A fine di ogni epica mi fermo, ti faccio provare e poi proseguo con la successiva.
+## Note
+- Nessuna modifica ai flussi di registrazione: il primo utente resta automaticamente manager, gli altri restano dipendenti finché non vengono promossi.
+- Tutti i permessi (turni, scambi, timbrature, report, chat annunci, task template, notifiche) sono già governati da `has_role(uid, 'manager')`: una volta promossi, i nuovi manager avranno automaticamente accesso completo come te.
+- Nessun impatto su RLS, chat, notifiche o turni esistenti.

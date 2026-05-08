@@ -570,6 +570,13 @@ export type Database = {
         Args: { _canale: string; _user: string }
         Returns: boolean
       }
+      set_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "manager" | "dipendente"
