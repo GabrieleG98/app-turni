@@ -131,6 +131,29 @@ function DettaglioDipendente() {
         </Card>
       )}
 
+      {iAmOwner && profilo && (
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="font-semibold">Modifica dati lavorativi</h2>
+            <p className="text-xs text-muted-foreground">Solo il proprietario può modificare ruolo e reparto di tutti i membri.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="rl">Ruolo lavoro</Label>
+              <Input id="rl" value={ruoloLavoro} onChange={(e) => setRuoloLavoro(e.target.value)} maxLength={80} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rp">Reparto</Label>
+              <Input id="rp" value={reparto} onChange={(e) => setReparto(e.target.value)} maxLength={80} />
+            </div>
+          </div>
+          <Button onClick={salvaDatiLavoro} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Salva
+          </Button>
+        </Card>
+      )}
+
       <Card className="p-4 flex items-center gap-3">
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, -1))}>
           <ChevronLeft className="h-4 w-4" />
