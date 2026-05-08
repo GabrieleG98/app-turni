@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 const items = [
   { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard },
   { title: "Turni", url: "/manager/turni", icon: CalendarDays },
+  { title: "Calendario", url: "/calendario", icon: CalendarRange },
   { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
   { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
   { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
