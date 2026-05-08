@@ -40,12 +40,17 @@ function ListaDipendenti() {
   const { data: ruoli = [] } = useQuery({
     queryKey: ["user_roles"],
     queryFn: async () => {
-      const { data } = await supabase.from("user_roles").select("user_id, role");
+      const { data } = await supabase
+        .from("user_roles")
+        .select("user_id, role, created_at")
+        .order("created_at", { ascending: true });
       return data ?? [];
     },
   });
 
   const isManager = (uid: string) => ruoli.some((r) => r.user_id === uid && r.role === "manager");
+  const ownerId = ruoli.find((r) => r.role === "manager")?.user_id ?? null;
+  const iAmOwner = me !== null && me === ownerId;
 
   const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/registrati` : "/registrati";
 
