@@ -61,11 +61,11 @@ function MieiTurni() {
 
   const { data: colleghi = [] } = useQuery({
     enabled: !!user,
-    queryKey: ["colleghi"],
+    queryKey: ["colleghi", user?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id, nome, cognome")
+        .select("id, nome, cognome, reparto")
         .neq("id", user!.id)
         .order("cognome");
       return data ?? [];
