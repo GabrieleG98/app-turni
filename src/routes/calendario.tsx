@@ -365,10 +365,18 @@ function CategorieLegenda() {
     qc.invalidateQueries({ queryKey: ["evento-categorie"] });
   };
 
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+    qc.invalidateQueries({ queryKey: ["eventi-speciali"] });
+    qc.invalidateQueries({ queryKey: ["eventi-speciali-sett"] });
+  };
+
   const aggiornaColore = async (id: string, colore: string) => {
     const { error } = await supabase.from("evento_categorie").update({ colore }).eq("id", id);
     if (error) { toast.error("Errore", { description: error.message }); return; }
-    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+    // Propaga il nuovo colore a tutti gli eventi che usano questa categoria
+    await supabase.from("eventi_speciali").update({ colore }).eq("categoria_id", id);
+    refreshAll();
   };
 
   const elimina = async (id: string) => {
@@ -376,7 +384,7 @@ function CategorieLegenda() {
     const { error } = await supabase.from("evento_categorie").delete().eq("id", id);
     if (error) { toast.error("Errore", { description: error.message }); return; }
     toast.success("Eliminata");
-    qc.invalidateQueries({ queryKey: ["evento-categorie"] });
+    refreshAll();
   };
 
   return (
