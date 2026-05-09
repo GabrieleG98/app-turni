@@ -23,6 +23,7 @@ import {
   LogOut,
   CalendarClock,
   FileWarning,
+  Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -35,6 +36,7 @@ const items = [
   { title: "Disponibilità", url: "/dipendente/disponibilita", icon: CalendarClock },
   { title: "Tasks", url: "/dipendente/tasks", icon: ListChecks },
   { title: "Correzioni", url: "/dipendente/correzioni", icon: FileWarning },
+  { title: "Timbra", url: "/dipendente/timbra", icon: Clock },
   { title: "Chat", url: "/dipendente/chat", icon: MessageCircle },
   { title: "Profilo", url: "/dipendente/profilo", icon: User },
 ];
