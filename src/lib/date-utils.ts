@@ -46,13 +46,3 @@ export function oreTimbratura(inizio: string, fine: string | null): number | nul
 export function fmtOre(n: number): string {
   return `${n.toFixed(1)} h`;
 }
-
-export interface TimbraturaLite {
-  orario_clock_in: string;
-  orario_clock_out: string | null;
-}
-
-/** Somma le ore di tutte le sessioni di timbratura (solo sessioni chiuse). */
-export function sommaOreSessioni(rows: TimbraturaLite[]): number {
-  return rows.reduce((s, r) => s + (oreTimbratura(r.orario_clock_in, r.orario_clock_out) ?? 0), 0);
-}
