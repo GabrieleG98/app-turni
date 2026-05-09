@@ -11,13 +11,8 @@ function Index() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#1e3a5f] flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-white" />
-          </div>
-          <p className="text-sm text-gray-500">Caricamento...</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

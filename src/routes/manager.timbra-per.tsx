@@ -1,15 +1,15 @@
 import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, Square, Loader2, Camera, Check } from "lucide-react";
 import { isoData } from "@/lib/date-utils";
-import { computeWindow, fmtRitardo } from "@/lib/timbra-window";
+import { uploadSelfie } from "@/lib/timbrature-utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/timbra-per")({
@@ -17,16 +17,21 @@ export const Route = createFileRoute("/manager/timbra-per")({
 });
 
 function TimbraPerPage() {
-  const { isOwner, loading } = useAuth();
+  const { role, loading } = useAuth();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [orarioCustom, setOrarioCustom] = useState<Record<string, string>>({});
+  const [foto, setFoto] = useState<Record<string, File>>({});
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const oggi = isoData(new Date());
 
   const { data: profili = [] } = useQuery({
     queryKey: ["timbra-per-profili"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, nome, cognome, ruolo_lavoro").order("cognome");
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, nome, cognome, ruolo_lavoro")
+        .order("cognome");
       return data ?? [];
     },
   });
@@ -34,108 +39,213 @@ function TimbraPerPage() {
   const { data: turni = [] } = useQuery({
     queryKey: ["timbra-per-turni", oggi],
     queryFn: async () => {
-      const { data } = await supabase.from("turni").select("*").eq("data", oggi).eq("pubblicato", true);
+      const { data } = await supabase
+        .from("turni")
+        .select("*")
+        .eq("data", oggi)
+        .eq("pubblicato", true);
       return data ?? [];
     },
   });
 
-  const { data: timbrature = [] } = useQuery({
-    queryKey: ["timbra-per-timb", oggi],
+  const { data: sessioni = [] } = useQuery({
+    queryKey: ["timbra-per-sessioni", oggi],
     queryFn: async () => {
-      const { data } = await supabase.from("timbrature").select("*").eq("data", oggi);
+      const { data } = await supabase
+        .from("timbrature")
+        .select("*")
+        .eq("data", oggi)
+        .order("orario_clock_in", { ascending: true });
       return data ?? [];
     },
   });
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
   }
-  if (!isOwner) return <Navigate to="/manager/dashboard" />;
+  if (role !== "manager") return <Navigate to="/dipendente" />;
 
   const turnoOf = (uid: string) => turni.find((t) => t.dipendente_id === uid);
-  const timbOf = (uid: string) => timbrature.find((t) => t.dipendente_id === uid);
+  const sessioniOf = (uid: string) => sessioni.filter((s) => s.dipendente_id === uid);
+  const sessioneAperta = (uid: string) => sessioniOf(uid).find((s) => !s.orario_clock_out) ?? null;
+
+  const onFileChange = (uid: string, file: File | null) => {
+    if (!file) return;
+    setFoto((f) => ({ ...f, [uid]: file }));
+    toast.success("Foto pronta", { description: "Ora premi Clock-in o Clock-out" });
+  };
+
+  const requireFoto = (uid: string): File | null => {
+    const f = foto[uid];
+    if (!f) {
+      toast.error("Foto richiesta", { description: "Scatta una foto prima di timbrare" });
+      inputRefs.current[uid]?.click();
+      return null;
+    }
+    return f;
+  };
 
   const clockIn = async (uid: string) => {
+    const file = requireFoto(uid);
+    if (!file) return;
     setBusy(uid);
-    const turno = turnoOf(uid);
-    const orarioStr = orarioCustom[uid];
-    const orario = orarioStr ? new Date(`${oggi}T${orarioStr}`).toISOString() : new Date().toISOString();
-    const { error } = await supabase.from("timbrature").insert({
-      dipendente_id: uid,
-      data: oggi,
-      orario_clock_in: orario,
-      note: turno ? null : "Timbrato dall'owner senza turno schedulato",
-    });
-    setBusy(null);
-    if (error) { toast.error("Errore", { description: error.message }); return; }
-    toast.success("Clock-in registrato");
-    qc.invalidateQueries({ queryKey: ["timbra-per-timb"] });
+    try {
+      const turno = turnoOf(uid);
+      const orarioStr = orarioCustom[uid];
+      const orario = orarioStr ? new Date(`${oggi}T${orarioStr}`).toISOString() : new Date().toISOString();
+      const foto_in_url = await uploadSelfie(uid, file, "in");
+      const { error } = await supabase.from("timbrature").insert({
+        dipendente_id: uid,
+        data: oggi,
+        orario_clock_in: orario,
+        foto_in_url,
+        note: turno ? null : "Timbrato dal manager senza turno schedulato",
+      });
+      if (error) throw error;
+      toast.success("Clock-in registrato");
+      setFoto(({ [uid]: _, ...rest }) => rest);
+      setOrarioCustom(({ [uid]: _, ...rest }) => rest);
+      qc.invalidateQueries({ queryKey: ["timbra-per-sessioni"] });
+    } catch (e: any) {
+      toast.error("Errore", { description: e.message });
+    } finally {
+      setBusy(null);
+    }
   };
 
   const clockOut = async (uid: string) => {
-    const t = timbOf(uid);
-    if (!t) return;
+    const sess = sessioneAperta(uid);
+    if (!sess) return;
+    const file = requireFoto(uid);
+    if (!file) return;
     setBusy(uid);
-    const orarioStr = orarioCustom[uid];
-    const orario = orarioStr ? new Date(`${oggi}T${orarioStr}`).toISOString() : new Date().toISOString();
-    const { error } = await supabase.from("timbrature").update({ orario_clock_out: orario }).eq("id", t.id);
-    setBusy(null);
-    if (error) { toast.error("Errore", { description: error.message }); return; }
-    toast.success("Clock-out registrato");
-    qc.invalidateQueries({ queryKey: ["timbra-per-timb"] });
+    try {
+      const orarioStr = orarioCustom[uid];
+      const orario = orarioStr ? new Date(`${oggi}T${orarioStr}`).toISOString() : new Date().toISOString();
+      const foto_out_url = await uploadSelfie(uid, file, "out");
+      const { error } = await supabase
+        .from("timbrature")
+        .update({ orario_clock_out: orario, foto_out_url })
+        .eq("id", sess.id);
+      if (error) throw error;
+      toast.success("Clock-out registrato");
+      setFoto(({ [uid]: _, ...rest }) => rest);
+      setOrarioCustom(({ [uid]: _, ...rest }) => rest);
+      qc.invalidateQueries({ queryKey: ["timbra-per-sessioni"] });
+    } catch (e: any) {
+      toast.error("Errore", { description: e.message });
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 max-w-5xl">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon"><Link to="/manager/dashboard"><ArrowLeft className="h-5 w-5" /></Link></Button>
+        <Button asChild variant="ghost" size="icon">
+          <Link to="/manager/dashboard">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <div>
           <h1 className="text-2xl font-bold">Timbra per…</h1>
-          <p className="text-sm text-muted-foreground">Solo owner · timbra clock-in/out per qualsiasi membro del team</p>
+          <p className="text-sm text-muted-foreground">
+            Disponibile in qualsiasi momento per dipendenti e manager · multi-sessione · foto obbligatoria
+          </p>
         </div>
       </div>
 
-      <Card className="overflow-hidden">
+      <div className="grid gap-3 sm:hidden">
+        {profili.map((p) => {
+          const sess = sessioniOf(p.id);
+          const aperta = sess.find((s) => !s.orario_clock_out);
+          const turno = turnoOf(p.id);
+          const hasFoto = !!foto[p.id];
+          return (
+            <Card key={p.id} className="p-3 space-y-2">
+              <div>
+                <div className="font-medium">{p.nome} {p.cognome}</div>
+                <div className="text-xs text-muted-foreground">{p.ruolo_lavoro || "—"}</div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {turno ? `Turno: ${turno.tipo_turno} ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}` : "Nessun turno"}
+                · Sessioni oggi: {sess.length}
+                {aperta && <Badge className="ml-1 bg-emerald-600">In turno</Badge>}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="time"
+                  className="w-24 text-xs"
+                  value={orarioCustom[p.id] ?? ""}
+                  onChange={(e) => setOrarioCustom({ ...orarioCustom, [p.id]: e.target.value })}
+                />
+                <input
+                  ref={(el) => { inputRefs.current[p.id] = el; }}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  onChange={(e) => onFileChange(p.id, e.target.files?.[0] ?? null)}
+                />
+                <Button size="sm" variant={hasFoto ? "secondary" : "outline"} onClick={() => inputRefs.current[p.id]?.click()}>
+                  {hasFoto ? <Check className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                {aperta ? (
+                  <Button size="sm" variant="destructive" className="flex-1" disabled={busy === p.id} onClick={() => clockOut(p.id)}>
+                    <Square className="h-3 w-3 mr-1 fill-current" /> Clock-out
+                  </Button>
+                ) : (
+                  <Button size="sm" className="flex-1" disabled={busy === p.id} onClick={() => clockIn(p.id)}>
+                    <Play className="h-3 w-3 mr-1 fill-current" /> Clock-in
+                  </Button>
+                )}
+                {!aperta && sess.length > 0 && (
+                  <Button size="sm" variant="outline" disabled={busy === p.id} onClick={() => clockIn(p.id)}>
+                    Nuova
+                  </Button>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="overflow-hidden hidden sm:block">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs uppercase">
             <tr>
               <th className="text-left p-3">Persona</th>
               <th className="text-left p-3">Turno oggi</th>
-              <th className="text-left p-3">Stato</th>
+              <th className="text-left p-3">Sessioni</th>
               <th className="text-left p-3">Orario custom</th>
+              <th className="text-left p-3">Foto</th>
               <th className="text-right p-3">Azioni</th>
             </tr>
           </thead>
           <tbody>
             {profili.map((p) => {
               const turno = turnoOf(p.id);
-              const t = timbOf(p.id);
-              const win = turno ? computeWindow(turno) : null;
-              const inCorso = !!t && !t.orario_clock_out;
-              const completato = !!t?.orario_clock_out;
+              const sess = sessioniOf(p.id);
+              const aperta = sess.find((s) => !s.orario_clock_out);
+              const hasFoto = !!foto[p.id];
               return (
                 <tr key={p.id} className="border-t">
                   <td className="p-3">
                     <div className="font-medium">{p.nome} {p.cognome}</div>
-                    <div className="text-xs text-muted-foreground">{p.ruolo_lavoro}</div>
+                    <div className="text-xs text-muted-foreground">{p.ruolo_lavoro || "—"}</div>
                   </td>
                   <td className="p-3 text-xs">
                     {turno ? `${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}` : <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="p-3">
-                    {completato ? (
-                      <Badge variant="outline">Completato</Badge>
-                    ) : inCorso ? (
-                      <Badge className="bg-emerald-600">In turno</Badge>
-                    ) : turno && win && win.state === "late" ? (
-                      <Badge variant="destructive">In ritardo {fmtRitardo(win.minutiRitardo)}</Badge>
-                    ) : turno && win && win.state === "missed" ? (
-                      <Badge variant="destructive">Mancato</Badge>
-                    ) : turno ? (
-                      <Badge variant="secondary">Da iniziare</Badge>
-                    ) : (
-                      <Badge variant="outline">Senza turno</Badge>
-                    )}
+                  <td className="p-3 text-xs">
+                    {sess.length} oggi
+                    {aperta && <Badge className="ml-2 bg-emerald-600">In turno</Badge>}
                   </td>
                   <td className="p-3">
                     <Input
@@ -146,18 +256,29 @@ function TimbraPerPage() {
                       placeholder="adesso"
                     />
                   </td>
-                  <td className="p-3 text-right">
-                    {!t && (
+                  <td className="p-3">
+                    <input
+                      ref={(el) => { inputRefs.current[p.id] = el; }}
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      className="hidden"
+                      onChange={(e) => onFileChange(p.id, e.target.files?.[0] ?? null)}
+                    />
+                    <Button size="sm" variant={hasFoto ? "secondary" : "outline"} onClick={() => inputRefs.current[p.id]?.click()}>
+                      {hasFoto ? <><Check className="h-3 w-3 mr-1" /> Pronta</> : <><Camera className="h-3 w-3 mr-1" /> Scatta</>}
+                    </Button>
+                  </td>
+                  <td className="p-3 text-right space-x-2">
+                    {aperta ? (
+                      <Button size="sm" variant="destructive" disabled={busy === p.id} onClick={() => clockOut(p.id)}>
+                        <Square className="h-3 w-3 mr-1 fill-current" /> Clock-out
+                      </Button>
+                    ) : (
                       <Button size="sm" disabled={busy === p.id} onClick={() => clockIn(p.id)}>
                         <Play className="h-3 w-3 mr-1 fill-current" /> Clock-in
                       </Button>
                     )}
-                    {inCorso && (
-                      <Button size="sm" variant="destructive" disabled={busy === p.id} onClick={() => clockOut(p.id)}>
-                        <Square className="h-3 w-3 mr-1 fill-current" /> Clock-out
-                      </Button>
-                    )}
-                    {completato && <span className="text-xs text-muted-foreground">—</span>}
                   </td>
                 </tr>
               );
