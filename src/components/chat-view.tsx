@@ -101,16 +101,56 @@ export function ChatView({ isManager }: { isManager: boolean }) {
   const canaleSel = canali.find((c) => c.id === canaleId);
   const puoScrivere = canaleSel ? !canaleSel.solo_manager_scrive || isManager : false;
 
-  const invia = async () => {
+    const invia = async () => {
     const testo = bozza.trim();
-    if (!testo || !canaleId) return;
+    if (!testo || !canaleId || !user) return;
+
+    // 1. Inserisci il messaggio in chat_messaggi
     const { error } = await supabase.from("chat_messaggi").insert({
       canale_id: canaleId,
-      autore_id: user!.id,
+      autore_id: user.id,
       contenuto: testo,
     });
-    if (error) return toast.error("Errore", { description: error.message });
+
+    if (error) {
+      return toast.error("Errore", { description: error.message });
+    }
+
     setBozza("");
+
+    // 2. Crea le notifiche per gli altri utenti del canale
+    try {
+      const canale = canali.find((c) => c.id === canaleId);
+      if (!canale) return;
+
+      // Recupera il nome dell'autore
+      const autore = profili.find((p: any) => p.id === user.id);
+      const nomeAutore = autore ? `${autore.nome} ${autore.cognome}`.trim() : "Un collega";
+
+      // Prendi tutti gli utenti (profiles) tranne l'autore
+      const destinatari = (profili as any[]).filter((p) => p.id !== user.id);
+
+      if (destinatari.length === 0) return;
+
+      // Prepara le righe di notifica
+      const notificheToInsert = destinatari.map((dest) => ({
+        user_id: dest.id,
+        titolo: "Nuovo messaggio in chat",
+        descrizione: `Hai un nuovo messaggio da ${nomeAutore} nel canale #${canale.nome}`,
+        link: isManager ? "/manager/chat" : "/dipendente/chat",
+      }));
+
+      // Inserisci le notifiche
+      const { error: notifError } = await supabase
+        .from("notifiche")
+        .insert(notificheToInsert);
+
+      if (notifError) {
+        console.error("Errore inserimento notifiche:", notifError);
+      }
+    } catch (e) {
+      console.error("Errore generico notifiche:", e);
+    }
   };
 
   return (
