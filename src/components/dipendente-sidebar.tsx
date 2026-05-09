@@ -1,29 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  Home,
-  CalendarDays,
-  CalendarRange,
-  ListChecks,
-  MessageCircle,
-  User,
-  Hotel,
-  LogOut,
-  CalendarClock,
-  FileWarning,
-  Clock,
+  Home, CalendarDays, CalendarRange, ListChecks,
+  MessageCircle, User, Hotel, LogOut, CalendarClock,
+  FileWarning, Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -35,8 +19,8 @@ const items = [
   { title: "Calendario", url: "/calendario", icon: CalendarRange },
   { title: "Disponibilità", url: "/dipendente/disponibilita", icon: CalendarClock },
   { title: "Tasks", url: "/dipendente/tasks", icon: ListChecks },
-  { title: "Correzioni", url: "/dipendente/correzioni", icon: FileWarning },
   { title: "Timbra", url: "/dipendente/timbra", icon: Clock },
+  { title: "Correzioni", url: "/dipendente/correzioni", icon: FileWarning },
   { title: "Chat", url: "/dipendente/chat", icon: MessageCircle },
   { title: "Profilo", url: "/dipendente/profilo", icon: User },
 ];
