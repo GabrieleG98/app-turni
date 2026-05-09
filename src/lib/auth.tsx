@@ -59,21 +59,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) {
-        await loadUserData(data.session.user.id);
-      }
-      setLoading(false);
-    });
+    const sessionTimeout = setTimeout(() => setLoading(false), 5000);
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const refresh = async () => {
-    if (user) await loadUserData(user.id);
-  };
+supabase.auth.getSession().then(async ({ data }) => {
+  clearTimeout(sessionTimeout);
+  setSession(data.session);
+  setUser(data.session?.user ?? null);
+  if (data.session?.user) {
+    await loadUserData(data.session.user.id);
+  }
+  setLoading(false);
+});
 
   const signOut = async () => {
     await supabase.auth.signOut();
