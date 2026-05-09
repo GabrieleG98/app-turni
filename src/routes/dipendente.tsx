@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DipendenteSidebar } from "@/components/dipendente-sidebar";
 import { NotificheBell } from "@/components/notifiche-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TimbraFAB } from "@/components/timbra-fab";
+
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/dipendente")({
@@ -41,7 +41,7 @@ function DipendenteLayout() {
             <Outlet />
           </main>
         </div>
-        <TimbraFAB />
+        
       </div>
     </SidebarProvider>
   );
