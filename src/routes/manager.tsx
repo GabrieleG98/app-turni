@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ManagerSidebar } from "@/components/manager-sidebar";
 import { NotificheBell } from "@/components/notifiche-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TimbraFAB } from "@/components/timbra-fab";
+
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/manager")({
@@ -41,7 +41,7 @@ function ManagerLayout() {
             <Outlet />
           </main>
         </div>
-        <TimbraFAB />
+        
       </div>
     </SidebarProvider>
   );
