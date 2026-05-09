@@ -47,8 +47,9 @@ const ownerRes = false;
   };
 
   const refresh = async () => {
-    if (user) await loadUserData(user.id);
-  };
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  if (currentUser) await loadUserData(currentUser.id);
+};
 
   const signOut = async () => {
     await supabase.auth.signOut();
