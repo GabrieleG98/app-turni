@@ -18,7 +18,6 @@ interface AuthCtx {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
-  isOwner: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -31,67 +30,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadUserData = async (uid: string) => {
-    const [{ data: prof }, { data: roles }] = await Promise.all([
-  supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-  supabase.from("user_roles").select("role").eq("user_id", uid),
-]);
-const ownerRes = false;
-    setProfile((prof as Profile) ?? null);
-    const r = roles?.[0]?.role as AppRole | undefined;
-    setRole(r ?? null);
-    setIsOwner(Boolean(ownerRes));
+    try {
+      const [{ data: prof }, { data: roles }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid),
+      ]);
+      setProfile((prof as Profile) ?? null);
+      setRole((roles?.[0]?.role as AppRole) ?? null);
+    } catch {
+      setProfile(null);
+      setRole(null);
+    }
   };
 
   const refresh = async () => {
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
-  if (currentUser) await loadUserData(currentUser.id);
-};
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (u) await loadUserData(u.id);
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   useEffect(() => {
-  supabase.auth.getSession().then(({ data: { session: s } }) => {
-    setSession(s);
-    setUser(s?.user ?? null);
-    if (s?.user) {
-      loadUserData(s.user.id).finally(() => setLoading(false));
-    } else {
+    // Carica sessione esistente subito
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        await loadUserData(s.user.id);
+      }
       setLoading(false);
-    }
-  });
+    });
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
-    setSession(s);
-    setUser(s?.user ?? null);
-    if (s?.user) {
-      await loadUserData(s.user.id);
-    } else {
-      setProfile(null);
-      setRole(null);
-      setIsOwner(false);
-    }
-  });
+    // Ascolta cambiamenti auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        await loadUserData(s.user.id);
+      } else {
+        setProfile(null);
+        setRole(null);
+      }
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
-
-    // Fallback timeout nel caso onAuthStateChange non risponda
-    const t = setTimeout(() => setLoading(false), 5000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(t);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
-    <Ctx.Provider value={{ user, session, profile, role, isOwner, loading, signOut, refresh }}>
+    <Ctx.Provider value={{ user, session, profile, role, loading, signOut, refresh }}>
       {children}
     </Ctx.Provider>
   );
