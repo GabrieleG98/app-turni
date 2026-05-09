@@ -56,36 +56,92 @@ function ScambiPage() {
   const turnoMap = new Map(turni.map((t) => [t.id, t]));
 
   const decidi = async (id: string, decisione: "approved" | "rejected", swap: SwapRow) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("turno_swap_requests")
-      .update({
-        status: decisione,
-        decisione_di: user?.id,
-        decisione_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-    if (error) {
-      toast.error("Errore", { description: error.message });
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("turno_swap_requests")
+    .update({
+      status: decisione,
+      decisione_di: user?.id,
+      decisione_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    toast.error("Errore", { description: error.message });
+    return;
+  }
+
+  // Trova i profili dei due dipendenti coinvolti, solo per testo notifica
+  const daProfile = profMap.get(swap.da_dipendente);
+  const aProfile = profMap.get(swap.a_dipendente);
+  const turno = turnoMap.get(swap.turno_id);
+
+  // Prepara descrizione comune
+  const turnoLabel = turno
+    ? `${fmtData(new Date(turno.data))} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
+    : "turno assegnato";
+
+  if (decisione === "approved") {
+    // 1) Riassegno il turno al nuovo dipendente
+    const { error: e2 } = await supabase
+      .from("turni")
+      .update({ dipendente_id: swap.a_dipendente })
+      .eq("id", swap.turno_id);
+
+    if (e2) {
+      toast.error("Errore riassegnazione turno", { description: e2.message });
       return;
     }
-    if (decisione === "approved") {
-      // Riassegno il turno al nuovo dipendente
-      const { error: e2 } = await supabase
-        .from("turni")
-        .update({ dipendente_id: swap.a_dipendente })
-        .eq("id", swap.turno_id);
-      if (e2) {
-        toast.error("Errore riassegnazione turno", { description: e2.message });
-        return;
-      }
-      toast.success("Scambio approvato e turno riassegnato");
-    } else {
-      toast.success("Richiesta rifiutata");
+
+    toast.success("Scambio approvato e turno riassegnato");
+
+    // 2) Notifiche per approvazione
+    const notificheDaInserire = [];
+
+    // Notifica al richiedente
+    notificheDaInserire.push({
+      user_id: swap.da_dipendente,
+      titolo: "Scambio turno approvato",
+      descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata approvata.`,
+      link: "/dipendente/turni",
+    });
+
+    // Notifica al collega che riceve il turno (opzionale ma utile)
+    notificheDaInserire.push({
+      user_id: swap.a_dipendente,
+      titolo: "Ti è stato assegnato un turno tramite scambio",
+      descrizione: `Hai ricevuto un turno tramite scambio da ${daProfile ? `${daProfile.nome} ${daProfile.cognome}` : "un collega"} per il ${turnoLabel}.`,
+      link: "/dipendente/turni",
+    });
+
+    const { error: notifError } = await supabase
+      .from("notifiche")
+      .insert(notificheDaInserire);
+
+    if (notifError) {
+      console.error("Errore inserimento notifiche scambio approvato:", notifError);
     }
-    qc.invalidateQueries({ queryKey: ["swap-requests"] });
-    qc.invalidateQueries({ queryKey: ["turni-settimana"] });
-  };
+
+  } else {
+    toast.success("Richiesta rifiutata");
+
+    // Notifica di rifiuto solo al richiedente
+    const { error: notifError } = await supabase.from("notifiche").insert({
+      user_id: swap.da_dipendente,
+      titolo: "Scambio turno rifiutato",
+      descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata rifiutata dal manager.`,
+      link: "/dipendente/turni",
+    });
+
+    if (notifError) {
+      console.error("Errore inserimento notifiche scambio rifiutato:", notifError);
+    }
+  }
+
+  qc.invalidateQueries({ queryKey: ["swap-requests"] });
+  qc.invalidateQueries({ queryKey: ["turni-settimana"] });
+};
 
   const pending = swaps.filter((s) => s.status === "pending");
   const storico = swaps.filter((s) => s.status !== "pending");
