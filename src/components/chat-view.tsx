@@ -101,7 +101,7 @@ export function ChatView({ isManager }: { isManager: boolean }) {
   const canaleSel = canali.find((c) => c.id === canaleId);
   const puoScrivere = canaleSel ? !canaleSel.solo_manager_scrive || isManager : false;
 
-    const invia = async () => {
+  const invia = async () => {
     const testo = bozza.trim();
     if (!testo || !canaleId || !user) return;
 
