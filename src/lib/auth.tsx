@@ -46,34 +46,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsOwner(Boolean(ownerRes));
   };
 
+  const refresh = async () => {
+    if (user) await loadUserData(user.id);
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+    let initialLoad = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadUserData(s.user.id), 0);
+        await loadUserData(s.user.id);
       } else {
         setProfile(null);
         setRole(null);
         setIsOwner(false);
       }
+      if (initialLoad) {
+        initialLoad = false;
+        setLoading(false);
+      }
     });
 
-    const sessionTimeout = setTimeout(() => setLoading(false), 5000);
+    // Fallback timeout nel caso onAuthStateChange non risponda
+    const t = setTimeout(() => setLoading(false), 5000);
 
-supabase.auth.getSession().then(async ({ data }) => {
-  clearTimeout(sessionTimeout);
-  setSession(data.session);
-  setUser(data.session?.user ?? null);
-  if (data.session?.user) {
-    await loadUserData(data.session.user.id);
-  }
-  setLoading(false);
-});
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(t);
+    };
+  }, []);
 
   return (
     <Ctx.Provider value={{ user, session, profile, role, isOwner, loading, signOut, refresh }}>
