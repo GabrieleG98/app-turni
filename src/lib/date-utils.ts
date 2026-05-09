@@ -46,3 +46,10 @@ export function oreTimbratura(inizio: string, fine: string | null): number | nul
 export function fmtOre(n: number): string {
   return `${n.toFixed(1)} h`;
 }
+
+export function sommaOreSessioni(sessioni: { inizio: string; fine: string | null }[]): number {
+  return sessioni.reduce((tot, s) => {
+    const ore = oreTimbratura(s.inizio, s.fine);
+    return tot + (ore ?? 0);
+  }, 0);
+}
