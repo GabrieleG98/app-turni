@@ -56,23 +56,30 @@ const ownerRes = false;
   };
 
   useEffect(() => {
-    let initialLoad = true;
+  supabase.auth.getSession().then(({ data: { session: s } }) => {
+    setSession(s);
+    setUser(s?.user ?? null);
+    if (s?.user) {
+      loadUserData(s.user.id).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await loadUserData(s.user.id);
-      } else {
-        setProfile(null);
-        setRole(null);
-        setIsOwner(false);
-      }
-      if (initialLoad) {
-        initialLoad = false;
-        setLoading(false);
-      }
-    });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
+    setSession(s);
+    setUser(s?.user ?? null);
+    if (s?.user) {
+      await loadUserData(s.user.id);
+    } else {
+      setProfile(null);
+      setRole(null);
+      setIsOwner(false);
+    }
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 
     // Fallback timeout nel caso onAuthStateChange non risponda
     const t = setTimeout(() => setLoading(false), 5000);
