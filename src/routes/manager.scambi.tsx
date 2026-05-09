@@ -124,10 +124,12 @@ function ScambiPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Scambi turno</h1>
-        <p className="text-sm text-muted-foreground">Richieste dei dipendenti</p>
-      </div>
+<div>
+  <h1 className="text-2xl font-bold">Scambi turno</h1>
+  <p className="text-sm text-muted-foreground">
+    Richieste di scambio turno in attesa di approvazione
+  </p>
+</div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
