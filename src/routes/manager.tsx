@@ -4,7 +4,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ManagerSidebar } from "@/components/manager-sidebar";
 import { NotificheBell } from "@/components/notifiche-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/manager")({
@@ -41,7 +40,6 @@ function ManagerLayout() {
             <Outlet />
           </main>
         </div>
-        
       </div>
     </SidebarProvider>
   );
