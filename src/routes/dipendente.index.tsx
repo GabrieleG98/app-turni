@@ -9,6 +9,7 @@ import { Sparkles, Coffee, Pause as PauseIcon, AlertTriangle } from "lucide-reac
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
 import { CorrezioneDialog } from "@/components/correzione-dialog";
+import { TurnoDialog } from "@/components/turno-dialog";
 import { useTimbratura } from "@/hooks/use-timbratura";
 
 export const Route = createFileRoute("/dipendente/")({
@@ -19,6 +20,7 @@ function HomeOggi() {
   const qc = useQueryClient();
   const { user, profile } = useAuth();
   const [corrOpen, setCorrOpen] = useState(false);
+  const [turnoDialogOpen, setTurnoDialogOpen] = useState(false);
 
   const {
     sessioni,
@@ -88,29 +90,30 @@ function HomeOggi() {
       <main className="max-w-md mx-auto px-4 -mt-6 space-y-4 pb-32">
         <Card className="p-5 shadow-lg border-0">
           {turnoOggi ? (
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                  Turno di oggi
+            <button className="w-full text-left" onClick={() => setTurnoDialogOpen(true)}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                    Turno di oggi
+                  </div>
+                  <div className="font-display text-xl font-bold capitalize mt-1">{turnoOggi.tipo_turno}</div>
+                  <div className="text-base mt-0.5">
+                    {turnoOggi.ora_inizio.slice(0, 5)} – {turnoOggi.ora_fine.slice(0, 5)}
+                  </div>
+                  {turnoOggi.location && (
+                    <div className="text-sm text-muted-foreground mt-1">📍 {turnoOggi.location}</div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-2">Tocca per i dettagli →</div>
                 </div>
-                <div className="font-display text-xl font-bold capitalize mt-1">{turnoOggi.tipo_turno}</div>
-                <div className="text-base mt-0.5">
-                  {turnoOggi.ora_inizio.slice(0, 5)} – {turnoOggi.ora_fine.slice(0, 5)}
-                </div>
-                {turnoOggi.location && (
-                  <div className="text-sm text-muted-foreground mt-1">📍 {turnoOggi.location}</div>
-                )}
-              </div>
-              <div
-                className={`w-2.5 h-16 rounded-full ${
+                <div className={`w-2.5 h-16 rounded-full ${
                   turnoOggi.tipo_turno === "mattina"
                     ? "bg-turno-mattina"
                     : turnoOggi.tipo_turno === "pomeriggio"
                     ? "bg-turno-pomeriggio"
                     : "bg-turno-sera"
-                }`}
-              />
-            </div>
+                }`} />
+              </div>
+            </button>
           ) : (
             <div className="flex items-center gap-3 text-muted-foreground">
               <Sparkles className="h-5 w-5 text-brand" />
@@ -122,7 +125,6 @@ function HomeOggi() {
           )}
         </Card>
 
-        {/* ✅ Banner ritardo */}
         {ritardoMin !== null && (
           <Card className="p-3 border-destructive/50 bg-destructive/5 flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
@@ -176,15 +178,11 @@ function HomeOggi() {
               </Button>
             ) : (
               <div className="grid grid-cols-3 gap-2">
-                <Button size="sm" variant="outline" onClick={() => startPausa("pranzo")}>
-                  🍽️ Pranzo
-                </Button>
+                <Button size="sm" variant="outline" onClick={() => startPausa("pranzo")}>🍽️ Pranzo</Button>
                 <Button size="sm" variant="outline" onClick={() => startPausa("caffe")}>
                   <Coffee className="h-4 w-4 mr-1" /> Caffè
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => startPausa("altro")}>
-                  Altro
-                </Button>
+                <Button size="sm" variant="outline" onClick={() => startPausa("altro")}>Altro</Button>
               </div>
             )}
             {pause.length > 0 && (
@@ -192,10 +190,7 @@ function HomeOggi() {
                 {pause.map((p) => (
                   <div key={p.id} className="flex justify-between">
                     <span className="capitalize">{p.tipo}</span>
-                    <span>
-                      {fmtH(p.inizio)}{" – "}
-                      {p.fine ? fmtH(p.fine) : "in corso"}
-                    </span>
+                    <span>{fmtH(p.inizio)}{" – "}{p.fine ? fmtH(p.fine) : "in corso"}</span>
                   </div>
                 ))}
               </div>
@@ -211,6 +206,12 @@ function HomeOggi() {
           <AlertTriangle className="h-4 w-4 mr-2" /> Segnala errore timbratura
         </Button>
       </main>
+
+      <TurnoDialog
+        turno={turnoOggi ?? null}
+        open={turnoDialogOpen}
+        onOpenChange={setTurnoDialogOpen}
+      />
       <CorrezioneDialog
         open={corrOpen}
         onOpenChange={setCorrOpen}
@@ -220,3 +221,4 @@ function HomeOggi() {
     </>
   );
 }
+
