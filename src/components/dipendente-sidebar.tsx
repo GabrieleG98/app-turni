@@ -6,8 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Home, CalendarDays, CalendarRange, ListChecks,
-  MessageCircle, User, Hotel, LogOut, CalendarClock,
-  FileWarning, Clock,
+  MessageCircle, User, Hotel, LogOut, CalendarClock, Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -20,7 +19,6 @@ const items = [
   { title: "Disponibilità", url: "/dipendente/disponibilita", icon: CalendarClock },
   { title: "Tasks", url: "/dipendente/tasks", icon: ListChecks },
   { title: "Timbra", url: "/dipendente/timbra", icon: Clock },
-  { title: "Correzioni", url: "/dipendente/correzioni", icon: FileWarning },
   { title: "Chat", url: "/dipendente/chat", icon: MessageCircle },
   { title: "Profilo", url: "/dipendente/profilo", icon: User },
 ];
