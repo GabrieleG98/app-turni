@@ -141,7 +141,6 @@ function TimbraPerPage() {
           const sess = sessioniOf(p.id);
           const aperta = sess.find((s) => !s.orario_clock_out);
           const turno = turnoOf(p.id);
-          const hasFoto = !!foto[p.id];
           return (
             <Card key={p.id} className="p-3 space-y-2">
               <div>
