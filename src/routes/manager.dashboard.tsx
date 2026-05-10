@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { isToday, differenceInMinutes, parseISO } from "date-fns";
+import { AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -73,6 +75,31 @@ function Dashboard() {
     },
   });
 
+  const oggi = isoData(new Date());
+
+const { data: timbratureOggi = [] } = useQuery({
+  queryKey: ["timbrature-oggi"],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("timbrature")
+      .select("*")
+      .eq("data", oggi);
+    return data ?? [];
+  },
+});
+
+const { data: turniOggi = [] } = useQuery({
+  queryKey: ["turni-oggi"],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("turni")
+      .select("*")
+      .eq("data", oggi)
+      .eq("pubblicato", true);
+    return data ?? [];
+  },
+});
+
   const reparti = useMemo(
     () => Array.from(new Set(profili.map((p) => p.reparto).filter(Boolean))).sort(),
     [profili],
@@ -85,10 +112,22 @@ function Dashboard() {
       const oreP = tDip.reduce((s, t) => s + oreTraOrari(t.ora_inizio, t.ora_fine, t.data), 0);
       const tbDip = timbrature.filter((t) => t.dipendente_id === p.id);
       const oreE = tbDip.reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
-      return { p, oreP, oreE, diff: oreE - oreP };
-    });
-  }, [profili, turni, timbrature, reparto]);
+      
+      // ✅ NUOVO — calcolo ritardo oggi
+  const turnoOggiDip = turniOggi.find((t) => t.dipendente_id === p.id);
+  const timbOggiDip = timbratureOggi.find((t) => t.dipendente_id === p.id);
+  let ritardoMin: number | null = null;
+  if (turnoOggiDip && timbOggiDip) {
+    const previsto = parseISO(`${oggi}T${turnoOggiDip.ora_inizio}`);
+    const effettivo = new Date(timbOggiDip.orario_clock_in);
+    const delta = differenceInMinutes(effettivo, previsto);
+    if (delta > 0) ritardoMin = delta;
+  }
 
+  return { p, oreP, oreE, diff: oreE - oreP, ritardoMin };
+});
+    
+  }, [profili, turni, timbrature, turniOggi, timbratureOggi, reparto]);
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
@@ -134,6 +173,7 @@ function Dashboard() {
               <TableHead className="text-right hidden sm:table-cell">Ore pianificate</TableHead>
               <TableHead className="text-right">Lavorate</TableHead>
               <TableHead className="text-right">Diff.</TableHead>
+              <TableHead className="text-right hidden sm:table-cell">Oggi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,7 +184,7 @@ function Dashboard() {
                 </TableCell>
               </TableRow>
             ) : (
-              righe.map(({ p, oreP, oreE, diff }) => (
+              righe.map(({ p, oreP, oreE, diff, ritardoMin }) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
                     <Link
@@ -170,6 +210,18 @@ function Dashboard() {
                       <Badge variant="destructive">{fmtOre(diff)}</Badge>
                     )}
                   </TableCell>
+                  <TableCell className="text-right hidden sm:table-cell">
+      {ritardoMin !== null ? (
+        <Badge variant="destructive" className="gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          +{ritardoMin} min
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-xs">—</span>
+      )}
+    </TableCell>
+  </TableRow>
+))
                 </TableRow>
               ))
             )}
