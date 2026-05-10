@@ -14,6 +14,7 @@ import { it } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Download, Plus, ArrowLeft, Loader2 } from "lucide-react";
 import { exportSettimanaPPTX } from "@/lib/export-pptx";
 import { EventoDialog, CATEGORIA_COLORE, CATEGORIA_LABEL, type Categoria } from "@/components/evento-dialog";
+import { TurnoDialog } from "@/components/turno-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/calendario")({
@@ -26,6 +27,7 @@ function CalendarioPage() {
   const [inizio, setInizio] = useState(inizioSettimana());
   const [meseRif, setMeseRif] = useState(startOfMonth(new Date()));
   const [eventoDialog, setEventoDialog] = useState<{ open: boolean; initialData?: any; defaultDate?: string; readOnly?: boolean }>({ open: false });
+  const [turnoSelezionato, setTurnoSelezionato] = useState<any | null>(null);
   const [exporting, setExporting] = useState(false);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -113,13 +115,12 @@ function CalendarioPage() {
     }
   };
 
-  // Calcolo griglia mese (lunedì come primo)
   const meseGriglia = useMemo(() => {
     const start = startOfMonth(meseRif);
     const end = endOfMonth(meseRif);
-    const offsetStart = (getDay(start) + 6) % 7; // 0=lun
+    const offsetStart = (getDay(start) + 6) % 7;
     const gridStart = addDays(start, -offsetStart);
-    const totalDays = Math.ceil((offsetStart + (end.getDate())) / 7) * 7;
+    const totalDays = Math.ceil((offsetStart + end.getDate()) / 7) * 7;
     return Array.from({ length: totalDays }, (_, i) => addDays(gridStart, i));
   }, [meseRif]);
 
@@ -232,14 +233,18 @@ function CalendarioPage() {
                                     ? "bg-turno-pomeriggio text-turno-pomeriggio-foreground"
                                     : "bg-turno-sera text-turno-sera-foreground";
                                   return (
-                                    <div key={t.id} className={`rounded-md p-1.5 text-xs ${cls}`}>
+                                    <button
+                                      key={t.id}
+                                      onClick={() => setTurnoSelezionato(t)}
+                                      className={`w-full text-left rounded-md p-1.5 text-xs ${cls}`}
+                                    >
                                       <div className="font-semibold capitalize flex items-center gap-1">
                                         <span className="truncate">{t.tipo_turno}</span>
                                         <span className="ml-auto text-[10px] opacity-70 font-normal">{ore.toFixed(1)}h</span>
                                       </div>
                                       <div className="leading-tight">{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
                                       {t.location && <div className="opacity-80 truncate text-[10px]">{t.location}</div>}
-                                    </div>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -332,6 +337,11 @@ function CalendarioPage() {
         defaultDate={eventoDialog.defaultDate}
         readOnly={eventoDialog.readOnly}
       />
+      <TurnoDialog
+        turno={turnoSelezionato}
+        open={!!turnoSelezionato}
+        onOpenChange={(o) => { if (!o) setTurnoSelezionato(null); }}
+      />
     </div>
   );
 }
@@ -374,7 +384,6 @@ function CategorieLegenda() {
   const aggiornaColore = async (id: string, colore: string) => {
     const { error } = await supabase.from("evento_categorie").update({ colore }).eq("id", id);
     if (error) { toast.error("Errore", { description: error.message }); return; }
-    // Propaga il nuovo colore a tutti gli eventi che usano questa categoria
     await supabase.from("eventi_speciali").update({ colore }).eq("categoria_id", id);
     refreshAll();
   };
@@ -435,4 +444,3 @@ function CategorieLegenda() {
     </Card>
   );
 }
-
