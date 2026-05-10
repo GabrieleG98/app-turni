@@ -47,12 +47,9 @@ export function FotoTimbratura({ url, timbratura_id, campo, onDeleted }: FotoTim
   return (
     <>
       {/* Thumbnail cliccabile */}
-      <button
-        onClick={() => setOpen(true)}
-        className="w-8 h-8 rounded-md overflow-hidden border border-border shrink-0 hover:opacity-80 transition-opacity"
-      >
-        <img src={url} alt="foto timbratura" className="w-full h-full object-cover" />
-      </button>
+      const { data: { publicUrl } } = supabase.storage
+  .from("selfies")
+  .getPublicUrl(url);
 
       {/* Dialog fullscreen foto */}
       <Dialog open={open} onOpenChange={setOpen}>
