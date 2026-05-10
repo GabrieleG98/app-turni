@@ -9,9 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
-// Legacy export — alcuni file lo importano ancora
 export type Categoria = "matrimonio" | "riunione" | "evento_privato" | "altro";
 export const CATEGORIA_COLORE: Record<Categoria, string> = {
   matrimonio: "#ec4899",
@@ -46,11 +47,26 @@ interface Props {
   readOnly?: boolean;
 }
 
+async function inviaNotificaTutti(titolo: string, descrizione: string, link: string) {
+  const { data: utenti } = await supabase.from("profiles").select("id");
+  if (!utenti || utenti.length === 0) return;
+  await supabase.from("notifiche").insert(
+    utenti.map((u) => ({
+      user_id: u.id,
+      titolo,
+      descrizione,
+      link,
+    }))
+  );
+}
+
 export function EventoDialog({ open, onOpenChange, initialData, defaultDate, readOnly }: Props) {
   const { role } = useAuth();
   const qc = useQueryClient();
   const isManager = role === "manager";
-  const canEdit = isManager && !readOnly;
+
+  // modalità: "view" quando si apre un evento esistente, "edit" quando si crea o si clicca Modifica
+  const [modalita, setModalita] = useState<"view" | "edit">("edit");
 
   const { data: categorie = [] } = useQuery({
     queryKey: ["evento-categorie"],
@@ -86,6 +102,8 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
       categoria_id: initCatId ?? fallbackCat?.id ?? null,
       colore: initialData?.colore ?? fallbackCat?.colore ?? "#3b82f6",
     });
+    // Se è un evento esistente → modalità visualizzazione; se nuovo → modifica
+    setModalita(initialData?.id ? "view" : "edit");
   }, [open, initialData, defaultDate, categorie]);
 
   const onCategoriaChange = (id: string) => {
@@ -95,6 +113,7 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
 
   const salva = async () => {
     if (!form.titolo.trim()) { toast.error("Inserisci un titolo"); return; }
+    const isNuovo = !form.id;
     const payload: any = {
       titolo: form.titolo.trim(),
       descrizione: form.descrizione || null,
@@ -104,16 +123,34 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
       location: form.location || null,
       categoria_id: form.categoria_id,
       colore: form.colore,
-      categoria: "altro", // legacy NOT NULL enum column
+      categoria: "altro",
     };
-    const { error } = form.id
-      ? await supabase.from("eventi_speciali").update(payload).eq("id", form.id)
-      : await supabase.from("eventi_speciali").insert(payload);
+    const { data: saved, error } = form.id
+      ? await supabase.from("eventi_speciali").update(payload).eq("id", form.id).select().single()
+      : await supabase.from("eventi_speciali").insert(payload).select().single();
     if (error) { toast.error("Errore", { description: error.message }); return; }
+
+    // Notifica a tutti
+    const dataFmt = format(new Date(form.data), "d MMMM yyyy", { locale: it });
+    const orario = form.ora_inizio ? ` · ${form.ora_inizio.slice(0, 5)}${form.ora_fine ? `–${form.ora_fine.slice(0, 5)}` : ""}` : "";
+    await inviaNotificaTutti(
+      isNuovo ? `📅 Nuovo evento: ${form.titolo.trim()}` : `✏️ Evento aggiornato: ${form.titolo.trim()}`,
+      `${dataFmt}${orario}${form.location ? ` · ${form.location}` : ""}`,
+      "/calendario"
+    );
+
     toast.success(form.id ? "Evento aggiornato" : "Evento creato");
     qc.invalidateQueries({ queryKey: ["eventi-speciali"] });
     qc.invalidateQueries({ queryKey: ["eventi-speciali-sett"] });
-    onOpenChange(false);
+    qc.invalidateQueries({ queryKey: ["notifiche"] });
+
+    // Dopo salvataggio → torna in visualizzazione
+    if (saved?.id) {
+      setForm((f) => ({ ...f, id: saved.id }));
+      setModalita("view");
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const elimina = async () => {
@@ -128,36 +165,101 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
   };
 
   const categoriaSelezionata = categorie.find((c) => c.id === form.categoria_id);
+  const canEdit = isManager && !readOnly;
 
+  // ── MODALITÀ VISUALIZZAZIONE ──────────────────────────────────────
+  if (modalita === "view") {
+    const dataFmt = form.data
+      ? format(new Date(form.data), "EEEE d MMMM yyyy", { locale: it })
+      : "—";
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              {categoriaSelezionata && (
+                <span className="h-3 w-3 rounded-full shrink-0 mt-0.5" style={{ background: categoriaSelezionata.colore }} />
+              )}
+              <DialogTitle className="capitalize">{form.titolo || "Evento"}</DialogTitle>
+            </div>
+            {categoriaSelezionata && (
+              <DialogDescription>{categoriaSelezionata.nome}</DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-24 shrink-0">Data</span>
+              <span className="capitalize">{dataFmt}</span>
+            </div>
+            {(form.ora_inizio || form.ora_fine) && (
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-24 shrink-0">Orario</span>
+                <span>
+                  {form.ora_inizio ? form.ora_inizio.slice(0, 5) : "—"}
+                  {form.ora_fine ? ` – ${form.ora_fine.slice(0, 5)}` : ""}
+                </span>
+              </div>
+            )}
+            {form.location && (
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-24 shrink-0">Location</span>
+                <span>{form.location}</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-24 shrink-0">Note</span>
+              <span className="whitespace-pre-wrap">{form.descrizione || "/"}</span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 mt-2">
+            {canEdit && form.id && (
+              <Button variant="destructive" onClick={elimina} className="mr-auto">
+                <Trash2 className="h-4 w-4 mr-1" /> Elimina
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Chiudi</Button>
+            {canEdit && (
+              <Button onClick={() => setModalita("edit")}>
+                <Pencil className="h-4 w-4 mr-2" /> Modifica
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // ── MODALITÀ MODIFICA/CREAZIONE ───────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{!canEdit ? form.titolo || "Evento" : form.id ? "Modifica evento" : "Nuovo evento"}</DialogTitle>
-          {!canEdit && <DialogDescription>Solo i manager possono modificare gli eventi.</DialogDescription>}
+          <DialogTitle>{form.id ? "Modifica evento" : "Nuovo evento"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
             <Label>Titolo</Label>
-            <Input value={form.titolo} disabled={!canEdit} onChange={(e) => setForm({ ...form, titolo: e.target.value })} placeholder="Es. Matrimonio Rossi" />
+            <Input value={form.titolo} onChange={(e) => setForm({ ...form, titolo: e.target.value })} placeholder="Es. Matrimonio Rossi" />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
               <Label>Data</Label>
-              <Input type="date" value={form.data} disabled={!canEdit} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+              <Input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label>Ora inizio</Label>
-              <Input type="time" value={form.ora_inizio} disabled={!canEdit} onChange={(e) => setForm({ ...form, ora_inizio: e.target.value })} />
+              <Input type="time" value={form.ora_inizio} onChange={(e) => setForm({ ...form, ora_inizio: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label>Ora fine</Label>
-              <Input type="time" value={form.ora_fine} disabled={!canEdit} onChange={(e) => setForm({ ...form, ora_fine: e.target.value })} />
+              <Input type="time" value={form.ora_fine} onChange={(e) => setForm({ ...form, ora_fine: e.target.value })} />
             </div>
           </div>
           <div className="space-y-1">
             <Label>Location</Label>
-            <Input value={form.location} disabled={!canEdit} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Es. Sala Eventi" />
+            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Es. Sala Eventi" />
           </div>
           <div className="space-y-1">
             <Label>Categoria</Label>
@@ -166,7 +268,7 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
                 Nessuna categoria disponibile. Chiedi al proprietario di crearne una nella Legenda categorie.
               </div>
             ) : (
-              <Select value={form.categoria_id ?? undefined} disabled={!canEdit} onValueChange={onCategoriaChange}>
+              <Select value={form.categoria_id ?? undefined} onValueChange={onCategoriaChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleziona categoria">
                     {categoriaSelezionata && (
@@ -192,7 +294,7 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
           </div>
           <div className="space-y-1">
             <Label>Descrizione / Note</Label>
-            <Textarea rows={3} value={form.descrizione} disabled={!canEdit} onChange={(e) => setForm({ ...form, descrizione: e.target.value })} />
+            <Textarea rows={3} value={form.descrizione} onChange={(e) => setForm({ ...form, descrizione: e.target.value })} />
           </div>
         </div>
         <DialogFooter className="gap-2">
@@ -201,10 +303,13 @@ export function EventoDialog({ open, onOpenChange, initialData, defaultDate, rea
               <Trash2 className="h-4 w-4 mr-1" /> Elimina
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{canEdit ? "Annulla" : "Chiudi"}</Button>
-          {canEdit && <Button onClick={salva} disabled={categorie.length === 0}>Salva</Button>}
+          <Button variant="outline" onClick={() => form.id ? setModalita("view") : onOpenChange(false)}>
+            Annulla
+          </Button>
+          <Button onClick={salva} disabled={categorie.length === 0}>Salva</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
