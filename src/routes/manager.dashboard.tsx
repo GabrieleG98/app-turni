@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addDays, addWeeks, differenceInMinutes, parseISO } from "date-fns";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,7 +30,6 @@ import {
   oreTimbratura,
   oreTraOrari,
 } from "@/lib/date-utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/manager/dashboard")({
   component: Dashboard,
@@ -39,8 +38,8 @@ export const Route = createFileRoute("/manager/dashboard")({
 function Dashboard() {
   const [inizio, setInizio] = useState<Date>(inizioSettimana());
   const [reparto, setReparto] = useState<string>("tutti");
-
   const fine = addDays(inizio, 6);
+  const oggi = isoData(new Date());
 
   const { data: profili = [] } = useQuery({
     queryKey: ["profiles"],
@@ -74,30 +73,28 @@ function Dashboard() {
     },
   });
 
-  const oggi = isoData(new Date());
+  const { data: timbratureOggi = [] } = useQuery({
+    queryKey: ["timbrature-oggi"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("timbrature")
+        .select("*")
+        .eq("data", oggi);
+      return data ?? [];
+    },
+  });
 
-const { data: timbratureOggi = [] } = useQuery({
-  queryKey: ["timbrature-oggi"],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("timbrature")
-      .select("*")
-      .eq("data", oggi);
-    return data ?? [];
-  },
-});
-
-const { data: turniOggi = [] } = useQuery({
-  queryKey: ["turni-oggi"],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("turni")
-      .select("*")
-      .eq("data", oggi)
-      .eq("pubblicato", true);
-    return data ?? [];
-  },
-});
+  const { data: turniOggi = [] } = useQuery({
+    queryKey: ["turni-oggi"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("turni")
+        .select("*")
+        .eq("data", oggi)
+        .eq("pubblicato", true);
+      return data ?? [];
+    },
+  });
 
   const reparti = useMemo(
     () => Array.from(new Set(profili.map((p) => p.reparto).filter(Boolean))).sort(),
@@ -111,22 +108,19 @@ const { data: turniOggi = [] } = useQuery({
       const oreP = tDip.reduce((s, t) => s + oreTraOrari(t.ora_inizio, t.ora_fine, t.data), 0);
       const tbDip = timbrature.filter((t) => t.dipendente_id === p.id);
       const oreE = tbDip.reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
-      
-      // ✅ NUOVO — calcolo ritardo oggi
-  const turnoOggiDip = turniOggi.find((t) => t.dipendente_id === p.id);
-  const timbOggiDip = timbratureOggi.find((t) => t.dipendente_id === p.id);
-  let ritardoMin: number | null = null;
-  if (turnoOggiDip && timbOggiDip) {
-    const previsto = parseISO(`${oggi}T${turnoOggiDip.ora_inizio}`);
-    const effettivo = new Date(timbOggiDip.orario_clock_in);
-    const delta = differenceInMinutes(effettivo, previsto);
-    if (delta > 0) ritardoMin = delta;
-  }
+      const turnoOggiDip = turniOggi.find((t) => t.dipendente_id === p.id);
+      const timbOggiDip = timbratureOggi.find((t) => t.dipendente_id === p.id);
+      let ritardoMin: number | null = null;
+      if (turnoOggiDip && timbOggiDip) {
+        const previsto = parseISO(`${oggi}T${turnoOggiDip.ora_inizio}`);
+        const effettivo = new Date(timbOggiDip.orario_clock_in);
+        const delta = differenceInMinutes(effettivo, previsto);
+        if (delta > 0) ritardoMin = delta;
+      }
+      return { p, oreP, oreE, diff: oreE - oreP, ritardoMin };
+    });
+  }, [profili, turni, timbrature, turniOggi, timbratureOggi, reparto, oggi]);
 
-  return { p, oreP, oreE, diff: oreE - oreP, ritardoMin };
-});
-    
-  }, [profili, turni, timbrature, turniOggi, timbratureOggi, reparto]);
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
@@ -154,9 +148,7 @@ const { data: turniOggi = [] } = useQuery({
             <SelectContent>
               <SelectItem value="tutti">Tutti i reparti</SelectItem>
               {reparti.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
+                <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -178,12 +170,11 @@ const { data: turniOggi = [] } = useQuery({
           <TableBody>
             {righe.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nessun dipendente
                 </TableCell>
               </TableRow>
             ) : (
-                          ) : (
               righe.map(({ p, oreP, oreE, diff, ritardoMin }) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
