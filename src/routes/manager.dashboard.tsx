@@ -223,7 +223,7 @@ const { data: turniOggi = [] } = useQuery({
     </TableCell>
   </TableRow>
 ))
-                </TableRow>
+                
               ))
             )}
           </TableBody>
