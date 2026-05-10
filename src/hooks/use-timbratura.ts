@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { isoData, oreTimbratura, sommaOreSessioni } from "@/lib/date-utils";
-import { getCurrentPosition, uploadSelfie } from "@/lib/timbrature-utils";
+import { uploadSelfie } from "@/lib/timbrature-utils";
 import { computeWindow, type WindowState } from "@/lib/timbra-window";
 import { toast } from "sonner";
 import type { TimbraConferma } from "@/components/timbra-conferma-dialog";
@@ -86,27 +86,21 @@ export function useTimbratura() {
 
   const clockIn = useCallback(async (file: File | null) => {
     if (!user) return;
-    if (!file) {
-      toast.error("Foto richiesta", { description: "Scatta un selfie per timbrare l'entrata" });
-      return;
-    }
+    
     if (sessioneAttiva) {
       toast.error("Hai una sessione già aperta");
       return;
     }
     setBusy(true);
     try {
-      const coords = await getCurrentPosition();
-      const foto_in_url = await uploadSelfie(user.id, file, "in");
-      const orario = new Date();
-      const { error } = await supabase.from("timbrature").insert({
-        dipendente_id: user.id,
-        data: oggi,
-        orario_clock_in: orario.toISOString(),
-        lat_in: coords?.lat ?? null,
-        lng_in: coords?.lng ?? null,
-        foto_in_url,
-      });
+      const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
+const orario = new Date();
+const { error } = await supabase.from("timbrature").insert({
+  dipendente_id: user.id,
+  data: oggi,
+  orario_clock_in: orario.toISOString(),
+  foto_in_url,
+});
       if (error) throw error;
       setConferma({
         tipo: "in",
@@ -128,18 +122,22 @@ export function useTimbratura() {
       toast.error("Nessuna sessione aperta");
       return;
     }
-    if (!file) {
-      toast.error("Foto richiesta", { description: "Scatta un selfie per timbrare l'uscita" });
-      return;
-    }
+    
     if (pausaAperta) {
       toast.error("Chiudi prima la pausa in corso");
       return;
     }
     setBusy(true);
     try {
-      const coords = await getCurrentPosition();
-      const foto_out_url = user ? await uploadSelfie(user.id, file, "out") : null;
+      const foto_out_url = (file && user) ? await uploadSelfie(user.id, file, "out") : null;
+const orario = new Date();
+const { error } = await supabase
+  .from("timbrature")
+  .update({
+    orario_clock_out: orario.toISOString(),
+    foto_out_url,
+  })
+  .eq("id", sessioneAttiva.id);
       const orario = new Date();
       const { error } = await supabase
         .from("timbrature")
