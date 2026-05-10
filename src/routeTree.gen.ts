@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DipendenteIndexRouteImport } from './routes/dipendente.index'
 import { Route as ManagerTurniRouteImport } from './routes/manager.turni'
 import { Route as ManagerTimbraPerRouteImport } from './routes/manager.timbra-per'
+import { Route as ManagerTimbraRouteImport } from './routes/manager.timbra'
 import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
@@ -27,6 +28,7 @@ import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard
 import { Route as ManagerCorrezioniRouteImport } from './routes/manager.correzioni'
 import { Route as ManagerChatRouteImport } from './routes/manager.chat'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
+import { Route as DipendenteTimbraRouteImport } from './routes/dipendente.timbra'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
 import { Route as DipendenteProfiloRouteImport } from './routes/dipendente.profilo'
 import { Route as DipendenteDisponibilitaRouteImport } from './routes/dipendente.disponibilita'
@@ -86,6 +88,11 @@ const ManagerTimbraPerRoute = ManagerTimbraPerRouteImport.update({
   path: '/timbra-per',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ManagerTimbraRoute = ManagerTimbraRouteImport.update({
+  id: '/timbra',
+  path: '/timbra',
+  getParentRoute: () => ManagerRoute,
+} as any)
 const ManagerTasksRoute = ManagerTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -124,6 +131,11 @@ const ManagerChatRoute = ManagerChatRouteImport.update({
 const DipendenteTurniRoute = DipendenteTurniRouteImport.update({
   id: '/turni',
   path: '/turni',
+  getParentRoute: () => DipendenteRoute,
+} as any)
+const DipendenteTimbraRoute = DipendenteTimbraRouteImport.update({
+  id: '/timbra',
+  path: '/timbra',
   getParentRoute: () => DipendenteRoute,
 } as any)
 const DipendenteTasksRoute = DipendenteTasksRouteImport.update({
@@ -181,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
+  '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/correzioni': typeof ManagerCorrezioniRoute
@@ -189,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra': typeof ManagerTimbraRoute
   '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
@@ -208,6 +222,7 @@ export interface FileRoutesByTo {
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
+  '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/correzioni': typeof ManagerCorrezioniRoute
@@ -216,6 +231,7 @@ export interface FileRoutesByTo {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra': typeof ManagerTimbraRoute
   '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente': typeof DipendenteIndexRoute
@@ -237,6 +253,7 @@ export interface FileRoutesById {
   '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
+  '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
   '/manager/correzioni': typeof ManagerCorrezioniRoute
@@ -245,6 +262,7 @@ export interface FileRoutesById {
   '/manager/report': typeof ManagerReportRoute
   '/manager/scambi': typeof ManagerScambiRoute
   '/manager/tasks': typeof ManagerTasksRoute
+  '/manager/timbra': typeof ManagerTimbraRoute
   '/manager/timbra-per': typeof ManagerTimbraPerRoute
   '/manager/turni': typeof ManagerTurniRoute
   '/dipendente/': typeof DipendenteIndexRoute
@@ -267,6 +285,7 @@ export interface FileRouteTypes {
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
+    | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/correzioni'
@@ -275,6 +294,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra'
     | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente/'
@@ -294,6 +314,7 @@ export interface FileRouteTypes {
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
+    | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/correzioni'
@@ -302,6 +323,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra'
     | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente'
@@ -322,6 +344,7 @@ export interface FileRouteTypes {
     | '/dipendente/disponibilita'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
+    | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
     | '/manager/correzioni'
@@ -330,6 +353,7 @@ export interface FileRouteTypes {
     | '/manager/report'
     | '/manager/scambi'
     | '/manager/tasks'
+    | '/manager/timbra'
     | '/manager/timbra-per'
     | '/manager/turni'
     | '/dipendente/'
@@ -421,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerTimbraPerRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/timbra': {
+      id: '/manager/timbra'
+      path: '/timbra'
+      fullPath: '/manager/timbra'
+      preLoaderRoute: typeof ManagerTimbraRouteImport
+      parentRoute: typeof ManagerRoute
+    }
     '/manager/tasks': {
       id: '/manager/tasks'
       path: '/tasks'
@@ -475,6 +506,13 @@ declare module '@tanstack/react-router' {
       path: '/turni'
       fullPath: '/dipendente/turni'
       preLoaderRoute: typeof DipendenteTurniRouteImport
+      parentRoute: typeof DipendenteRoute
+    }
+    '/dipendente/timbra': {
+      id: '/dipendente/timbra'
+      path: '/timbra'
+      fullPath: '/dipendente/timbra'
+      preLoaderRoute: typeof DipendenteTimbraRouteImport
       parentRoute: typeof DipendenteRoute
     }
     '/dipendente/tasks': {
@@ -542,6 +580,7 @@ interface DipendenteRouteChildren {
   DipendenteDisponibilitaRoute: typeof DipendenteDisponibilitaRoute
   DipendenteProfiloRoute: typeof DipendenteProfiloRoute
   DipendenteTasksRoute: typeof DipendenteTasksRoute
+  DipendenteTimbraRoute: typeof DipendenteTimbraRoute
   DipendenteTurniRoute: typeof DipendenteTurniRoute
   DipendenteIndexRoute: typeof DipendenteIndexRoute
 }
@@ -552,6 +591,7 @@ const DipendenteRouteChildren: DipendenteRouteChildren = {
   DipendenteDisponibilitaRoute: DipendenteDisponibilitaRoute,
   DipendenteProfiloRoute: DipendenteProfiloRoute,
   DipendenteTasksRoute: DipendenteTasksRoute,
+  DipendenteTimbraRoute: DipendenteTimbraRoute,
   DipendenteTurniRoute: DipendenteTurniRoute,
   DipendenteIndexRoute: DipendenteIndexRoute,
 }
@@ -568,6 +608,7 @@ interface ManagerRouteChildren {
   ManagerReportRoute: typeof ManagerReportRoute
   ManagerScambiRoute: typeof ManagerScambiRoute
   ManagerTasksRoute: typeof ManagerTasksRoute
+  ManagerTimbraRoute: typeof ManagerTimbraRoute
   ManagerTimbraPerRoute: typeof ManagerTimbraPerRoute
   ManagerTurniRoute: typeof ManagerTurniRoute
   ManagerDipendentiIdRoute: typeof ManagerDipendentiIdRoute
@@ -582,6 +623,7 @@ const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerReportRoute: ManagerReportRoute,
   ManagerScambiRoute: ManagerScambiRoute,
   ManagerTasksRoute: ManagerTasksRoute,
+  ManagerTimbraRoute: ManagerTimbraRoute,
   ManagerTimbraPerRoute: ManagerTimbraPerRoute,
   ManagerTurniRoute: ManagerTurniRoute,
   ManagerDipendentiIdRoute: ManagerDipendentiIdRoute,
