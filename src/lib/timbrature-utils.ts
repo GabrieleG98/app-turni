@@ -13,16 +13,40 @@ export function getCurrentPosition(timeoutMs = 8000): Promise<Coords | null> {
   });
 }
 
+// ✅ NUOVO — comprime la foto prima dell'upload
+function compressFoto(file: File, maxWidth = 800, qualita = 0.7): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => resolve(blob ?? file),
+        "image/jpeg",
+        qualita
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 export async function uploadSelfie(
   userId: string,
   file: File,
   kind: "in" | "out"
 ): Promise<string | null> {
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const path = `${userId}/${Date.now()}-${kind}.${ext}`;
+  // ✅ comprimi prima di inviare
+  const blob = await compressFoto(file);
+  const path = `${userId}/${Date.now()}-${kind}.jpg`;
   const { error } = await supabase.storage
     .from("timbrature-foto")
-    .upload(path, file, { upsert: false, contentType: file.type || "image/jpeg" });
+    .upload(path, blob, { upsert: false, contentType: "image/jpeg" });
   if (error) {
     console.error("upload selfie error", error);
     return null;
