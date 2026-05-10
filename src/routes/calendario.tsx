@@ -23,9 +23,10 @@ export const Route = createFileRoute("/calendario")({
 
 function CalendarioPage() {
   const { user, role, loading } = useAuth();
-  const [view, setView] = useState<"settimana" | "mese">("settimana");
+  const [view, setView] = useState<"settimana" | "mese-eventi" | "mese-turni">("settimana");
   const [inizio, setInizio] = useState(inizioSettimana());
   const [meseRif, setMeseRif] = useState(startOfMonth(new Date()));
+  const [meseTurniRif, setMeseTurniRif] = useState(startOfMonth(new Date()));
   const [eventoDialog, setEventoDialog] = useState<{ open: boolean; initialData?: any; defaultDate?: string; readOnly?: boolean }>({ open: false });
   const [turnoSelezionato, setTurnoSelezionato] = useState<any | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -85,6 +86,22 @@ function CalendarioPage() {
     },
   });
 
+  // Turni mese
+  const meseTurniInizio = startOfMonth(meseTurniRif);
+  const meseTurniFine = endOfMonth(meseTurniRif);
+  const { data: turniMese = [] } = useQuery({
+    queryKey: ["turni-cal-mese", isoData(meseTurniInizio)],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("turni")
+        .select("*")
+        .eq("pubblicato", true)
+        .gte("data", isoData(meseTurniInizio))
+        .lte("data", isoData(meseTurniFine));
+      return data ?? [];
+    },
+  });
+
   const turniByCell = useMemo(() => {
     const m = new Map<string, typeof turniSett>();
     turniSett.forEach((t) => {
@@ -96,6 +113,16 @@ function CalendarioPage() {
     m.forEach((arr) => arr.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio)));
     return m;
   }, [turniSett]);
+
+  const turniMeseByGiorno = useMemo(() => {
+    const m = new Map<string, typeof turniMese>();
+    turniMese.forEach((t) => {
+      const arr = m.get(t.data) ?? [];
+      arr.push(t);
+      m.set(t.data, arr);
+    });
+    return m;
+  }, [turniMese]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -124,6 +151,15 @@ function CalendarioPage() {
     return Array.from({ length: totalDays }, (_, i) => addDays(gridStart, i));
   }, [meseRif]);
 
+  const meseTurniGriglia = useMemo(() => {
+    const start = startOfMonth(meseTurniRif);
+    const end = endOfMonth(meseTurniRif);
+    const offsetStart = (getDay(start) + 6) % 7;
+    const gridStart = addDays(start, -offsetStart);
+    const totalDays = Math.ceil((offsetStart + end.getDate()) / 7) * 7;
+    return Array.from({ length: totalDays }, (_, i) => addDays(gridStart, i));
+  }, [meseTurniRif]);
+
   const eventiByGiorno = useMemo(() => {
     const m = new Map<string, typeof eventiMese>();
     eventiMese.forEach((e) => {
@@ -135,6 +171,12 @@ function CalendarioPage() {
   }, [eventiMese]);
 
   const oggi = isoData(new Date());
+
+  const TURNO_COLORI: Record<string, string> = {
+    mattina: "bg-turno-mattina text-turno-mattina-foreground",
+    pomeriggio: "bg-turno-pomeriggio text-turno-pomeriggio-foreground",
+    sera: "bg-turno-sera text-turno-sera-foreground",
+  };
 
   return (
     <div className="min-h-screen bg-muted/20 pb-20">
@@ -156,7 +198,8 @@ function CalendarioPage() {
         <Tabs value={view} onValueChange={(v) => setView(v as any)}>
           <TabsList>
             <TabsTrigger value="settimana">Settimana — Turni</TabsTrigger>
-            <TabsTrigger value="mese">Mese — Eventi</TabsTrigger>
+            <TabsTrigger value="mese-eventi">Mese — Eventi</TabsTrigger>
+            <TabsTrigger value="mese-turni">Mese — Turni</TabsTrigger>
           </TabsList>
 
           {/* SETTIMANA */}
@@ -259,8 +302,8 @@ function CalendarioPage() {
             </Card>
           </TabsContent>
 
-          {/* MESE */}
-          <TabsContent value="mese" className="space-y-3 mt-3">
+          {/* MESE — EVENTI */}
+          <TabsContent value="mese-eventi" className="space-y-3 mt-3">
             <Card className="p-3 flex items-center gap-2 flex-wrap">
               <Button variant="outline" size="icon" onClick={() => setMeseRif(addMonths(meseRif, -1))}><ChevronLeft className="h-4 w-4" /></Button>
               <div className="font-medium min-w-[180px] text-center capitalize">{format(meseRif, "MMMM yyyy", { locale: it })}</div>
@@ -297,7 +340,6 @@ function CalendarioPage() {
                           <button
                             onClick={() => setEventoDialog({ open: true, defaultDate: dataIso })}
                             className="opacity-0 hover:opacity-100 focus:opacity-100 transition text-muted-foreground hover:text-brand"
-                            aria-label="Aggiungi evento"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
@@ -326,6 +368,56 @@ function CalendarioPage() {
             </Card>
 
             <CategorieLegenda />
+          </TabsContent>
+
+          {/* MESE — TURNI */}
+          <TabsContent value="mese-turni" className="space-y-3 mt-3">
+            <Card className="p-3 flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="icon" onClick={() => setMeseTurniRif(addMonths(meseTurniRif, -1))}><ChevronLeft className="h-4 w-4" /></Button>
+              <div className="font-medium min-w-[180px] text-center capitalize">{format(meseTurniRif, "MMMM yyyy", { locale: it })}</div>
+              <Button variant="outline" size="icon" onClick={() => setMeseTurniRif(addMonths(meseTurniRif, 1))}><ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={() => setMeseTurniRif(startOfMonth(new Date()))}>Oggi</Button>
+            </Card>
+
+            <Card className="p-2 md:p-3">
+              <div className="grid grid-cols-7 gap-1 text-[11px] font-semibold text-muted-foreground uppercase mb-1">
+                {GIORNI.map((g) => <div key={g} className="text-center py-1">{g.slice(0, 3)}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {meseTurniGriglia.map((g) => {
+                  const dataIso = isoData(g);
+                  const turni = turniMeseByGiorno.get(dataIso) ?? [];
+                  const isOggi = dataIso === oggi;
+                  const fuoriMese = !isSameMonth(g, meseTurniRif);
+                  return (
+                    <div
+                      key={dataIso}
+                      className={`min-h-[88px] rounded-md border p-1.5 text-xs flex flex-col gap-1 ${fuoriMese ? "bg-muted/30 opacity-50" : "bg-background"} ${isOggi ? "ring-2 ring-brand" : ""}`}
+                    >
+                      <span className={`font-semibold ${isOggi ? "text-brand" : ""}`}>{format(g, "d")}</span>
+                      <div className="space-y-1 overflow-hidden">
+                        {turni.slice(0, 3).map((t) => {
+                          const cls = TURNO_COLORI[t.tipo_turno] ?? "bg-muted text-muted-foreground";
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => setTurnoSelezionato(t)}
+                              className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded truncate font-medium ${cls}`}
+                              title={`${t.tipo_turno} · ${t.ora_inizio.slice(0, 5)}–${t.ora_fine.slice(0, 5)}`}
+                            >
+                              {t.ora_inizio.slice(0, 5)} {t.tipo_turno}
+                            </button>
+                          );
+                        })}
+                        {turni.length > 3 && (
+                          <div className="text-[10px] text-muted-foreground">+{turni.length - 3} altri</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
@@ -422,7 +514,7 @@ function CategorieLegenda() {
             )}
             <span>{c.nome}</span>
             {isOwner && (
-              <button onClick={() => elimina(c.id)} className="ml-1 text-muted-foreground hover:text-destructive" aria-label="Elimina">×</button>
+              <button onClick={() => elimina(c.id)} className="ml-1 text-muted-foreground hover:text-destructive">×</button>
             )}
           </div>
         ))}
