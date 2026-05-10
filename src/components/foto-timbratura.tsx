@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { getSelfieSignedUrl } from "@/lib/timbrature-utils";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 
@@ -18,9 +19,14 @@ export function FotoTimbratura({ url, timbratura_id, campo, onDeleted }: FotoTim
   const isManager = role === "manager";
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
-  if (!url) {
-    // nessuna foto: mostra un segnaposto grigio piccolo
+  useEffect(() => {
+    if (!url) return;
+    getSelfieSignedUrl(url).then(setSignedUrl);
+  }, [url]);
+
+  if (!url || !signedUrl) {
     return (
       <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
         <span className="text-[10px] text-muted-foreground">–</span>
@@ -46,23 +52,23 @@ export function FotoTimbratura({ url, timbratura_id, campo, onDeleted }: FotoTim
 
   return (
     <>
-      {/* Thumbnail cliccabile */}
-      const { data: { publicUrl } } = supabase.storage
-  .from("selfies")
-  .getPublicUrl(url);
+      <button
+        onClick={() => setOpen(true)}
+        className="w-8 h-8 rounded-md overflow-hidden border border-border shrink-0 hover:opacity-80 transition-opacity"
+      >
+        <img src={signedUrl} alt="foto timbratura" className="w-full h-full object-cover" />
+      </button>
 
-      {/* Dialog fullscreen foto */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm p-0 overflow-hidden">
           <div className="relative">
-            <img src={url} alt="foto timbratura" className="w-full object-contain max-h-[80vh]" />
+            <img src={signedUrl} alt="foto timbratura" className="w-full object-contain max-h-[80vh]" />
             <button
               onClick={() => setOpen(false)}
               className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1"
             >
               <X className="h-4 w-4" />
             </button>
-            {/* Bottone elimina SOLO per manager */}
             {isManager && (
               <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-3 flex justify-end">
                 <Button
