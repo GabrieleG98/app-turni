@@ -17,7 +17,7 @@ import {
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -41,6 +41,9 @@ function DettaglioDipendente() {
   const [delOpen, setDelOpen] = useState(false);
   const [delConfirm, setDelConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [giorniAperti, setGiorniAperti] = useState<Set<string>>(new Set());
+  const [paginaTimb, setPaginaTimb] = useState(0);
+  const RIGHE_PER_PAGINA = 7;
   const eliminaFn = useServerFn(eliminaDipendente);
 
   useEffect(() => {
@@ -210,47 +213,125 @@ function DettaglioDipendente() {
   <h2 className="font-semibold mb-3">Timbrature</h2>
   {timbrature.length === 0 ? (
     <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
-  ) : (
-    <div className="space-y-2 text-sm">
-      {timbrature.map((t) => {
-        const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
-        return (
-          <div key={t.id} className="flex items-center justify-between border-b pb-2 last:border-0 gap-2">
-            {/* Data */}
-            <span className="shrink-0 w-24">{fmtData(t.data)}</span>
+  ) : (() => {
+    // Raggruppa per data
+    const grouped = timbrature.reduce((acc, t) => {
+      const d = t.data;
+      if (!acc[d]) acc[d] = [];
+      acc[d].push(t);
+      return acc;
+    }, {} as Record<string, typeof timbrature>);
 
-            {/* Foto entrata + orari + Foto uscita */}
-            <div className="flex items-center gap-2 flex-1 justify-center">
-              <FotoTimbratura
-                url={t.foto_in_url ?? null}
-                timbratura_id={t.id}
-                campo="foto_in_url"
-                onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
-              />
-              <span className="text-muted-foreground tabular-nums">
-                {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                {" → "}
-                {t.orario_clock_out
-                  ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
-                  : <em>in corso</em>}
-              </span>
-              <FotoTimbratura
-                url={t.foto_out_url ?? null}
-                timbratura_id={t.id}
-                campo="foto_out_url"
-                onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
-              />
+    const giornatate = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+    const totPagine = Math.ceil(giornatate.length / RIGHE_PER_PAGINA);
+    const giornataVisibili = giornatate.slice(
+      paginaTimb * RIGHE_PER_PAGINA,
+      (paginaTimb + 1) * RIGHE_PER_PAGINA
+    );
+
+    const toggleGiorno = (data: string) => {
+      setGiorniAperti((prev) => {
+        const next = new Set(prev);
+        if (next.has(data)) next.delete(data);
+        else next.add(data);
+        return next;
+      });
+    };
+
+    return (
+      <div className="space-y-1 text-sm">
+        {giornataVisibili.map((data) => {
+          const sessioni = grouped[data];
+          const aperto = giorniAperti.has(data);
+          const oreGiorno = sessioni.reduce(
+            (s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0
+          );
+          return (
+            <div key={data} className="border rounded-md overflow-hidden">
+              {/* Riga data cliccabile */}
+              <button
+                onClick={() => toggleGiorno(data)}
+                className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${aperto ? "rotate-180" : ""}`} />
+                  <span className="font-medium">{fmtData(new Date(data))}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {sessioni.length} session{sessioni.length > 1 ? "i" : "e"}
+                  </span>
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {fmtOre(oreGiorno)}
+                </span>
+              </button>
+
+              {/* Dettaglio sessioni a tendina */}
+              {aperto && (
+                <div className="border-t divide-y bg-muted/10">
+                  {sessioni.map((t) => {
+                    const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
+                    return (
+                      <div key={t.id} className="flex items-center justify-between px-4 py-2 gap-2">
+                        <div className="flex items-center gap-2 flex-1 justify-center">
+                          <FotoTimbratura
+                            url={t.foto_in_url ?? null}
+                            timbratura_id={t.id}
+                            campo="foto_in_url"
+                            onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+                          />
+                          <span className="text-muted-foreground tabular-nums">
+                            {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                            {" → "}
+                            {t.orario_clock_out
+                              ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+                              : <em>in corso</em>}
+                          </span>
+                          <FotoTimbratura
+                            url={t.foto_out_url ?? null}
+                            timbratura_id={t.id}
+                            campo="foto_out_url"
+                            onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+                          />
+                        </div>
+                        <span className="font-medium shrink-0 w-12 text-right text-xs">
+                          {ore !== null ? fmtOre(ore) : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+          );
+        })}
 
-            {/* Ore */}
-            <span className="font-medium shrink-0 w-12 text-right">
-              {ore !== null ? fmtOre(ore) : "—"}
+        {/* Paginazione */}
+        {totPagine > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={paginaTimb === 0}
+              onClick={() => setPaginaTimb((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Precedente
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {paginaTimb + 1} / {totPagine}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={paginaTimb === totPagine - 1}
+              onClick={() => setPaginaTimb((p) => p + 1)}
+            >
+              Successiva <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
-        );
-      })}
-    </div>
-  )}
+        )}
+      </div>
+    );
+  })()}
 </Card>
 
       {profilo && me !== id && ownerId !== id && (
