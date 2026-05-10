@@ -85,37 +85,46 @@ export function useTimbratura() {
   const minutiRitardo = win.minutiRitardo;
 
   const clockIn = useCallback(async (file: File | null) => {
-    if (!user) return;
-    
-    if (sessioneAttiva) {
-      toast.error("Hai una sessione già aperta");
-      return;
-    }
-    setBusy(true);
-    try {
-      const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
-const orario = new Date();
-const { error } = await supabase.from("timbrature").insert({
-  dipendente_id: user.id,
-  data: oggi,
-  orario_clock_in: orario.toISOString(),
-  foto_in_url,
-});
-      if (error) throw error;
-      setConferma({
-        tipo: "in",
-        orario,
-        fotoUrl: foto_in_url,
-        ritardoMin: minutiRitardo,
-      });
-      toast.success(minutiRitardo > 0 ? `Entrata con ${minutiRitardo} min di ritardo` : "Entrata timbrata");
-      qc.invalidateQueries({ queryKey: ["timb-oggi"] });
-    } catch (e: any) {
-      toast.error("Errore", { description: e.message });
-    } finally {
-      setBusy(false);
-    }
-  }, [user, sessioneAttiva, oggi, minutiRitardo, qc]);
+  if (!user) return;
+
+  if (sessioneAttiva) {
+    toast.error("Hai una sessione già aperta");
+    return;
+  }
+
+  // ✅ blocco se non c'è turno pubblicato per oggi
+  if (!isManagerFree && !turnoOggi) {
+    toast.error("Nessun turno schedulato", {
+      description: "Non puoi timbrare senza un turno pubblicato per oggi.",
+    });
+    return;
+  }
+
+  setBusy(true);
+  try {
+    const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
+    const orario = new Date();
+    const { error } = await supabase.from("timbrature").insert({
+      dipendente_id: user.id,
+      data: oggi,
+      orario_clock_in: orario.toISOString(),
+      foto_in_url,
+    });
+    if (error) throw error;
+    setConferma({
+      tipo: "in",
+      orario,
+      fotoUrl: foto_in_url,
+      ritardoMin: minutiRitardo,
+    });
+    toast.success(minutiRitardo > 0 ? `Entrata con ${minutiRitardo} min di ritardo` : "Entrata timbrata");
+    qc.invalidateQueries({ queryKey: ["timb-oggi"] });
+  } catch (e: any) {
+    toast.error("Errore", { description: e.message });
+  } finally {
+    setBusy(false);
+  }
+}, [user, sessioneAttiva, turnoOggi, isManagerFree, oggi, minutiRitardo, qc]);
 
   const clockOut = useCallback(async (file: File | null) => {
     if (!sessioneAttiva) {
