@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { isToday, differenceInMinutes, parseISO } from "date-fns";
+import { addDays, addWeeks, differenceInMinutes, parseISO } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 import {
   Select,
@@ -30,7 +30,6 @@ import {
   oreTimbratura,
   oreTraOrari,
 } from "@/lib/date-utils";
-import { addDays, addWeeks } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/manager/dashboard")({
@@ -185,32 +184,34 @@ const { data: turniOggi = [] } = useQuery({
               </TableRow>
             ) : (
               righe.map(({ p, oreP, oreE, diff, ritardoMin }) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      to="/manager/dipendenti/$id"
-                      params={{ id: p.id }}
-                      className="hover:underline"
-                    >
-                      {p.nome} {p.cognome}
-                    </Link>
-                    <div className="text-xs text-muted-foreground sm:hidden">{p.reparto || "—"} · pian. {fmtOre(oreP)}</div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground hidden sm:table-cell">{p.reparto || "—"}</TableCell>
-                  <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
-                  <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
-                  <TableCell className="text-right">
-                    {Math.abs(diff) < 0.05 ? (
-                      <Badge variant="secondary">In linea</Badge>
-                    ) : diff > 0 ? (
-                      <Badge className="bg-turno-mattina text-turno-mattina-foreground">
-                        +{fmtOre(diff)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">{fmtOre(diff)}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right hidden sm:table-cell">
+  <TableRow key={p.id}>
+    <TableCell className="font-medium">
+      <Link
+        to="/manager/dipendenti/$id"
+        params={{ id: p.id }}
+        className="hover:underline"
+      >
+        {p.nome} {p.cognome}
+      </Link>
+      <div className="text-xs text-muted-foreground sm:hidden">
+        {p.reparto || "—"} · pian. {fmtOre(oreP)}
+      </div>
+    </TableCell>
+    <TableCell className="text-muted-foreground hidden sm:table-cell">{p.reparto || "—"}</TableCell>
+    <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
+    <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
+    <TableCell className="text-right">
+      {Math.abs(diff) < 0.05 ? (
+        <Badge variant="secondary">In linea</Badge>
+      ) : diff > 0 ? (
+        <Badge className="bg-turno-mattina text-turno-mattina-foreground">
+          +{fmtOre(diff)}
+        </Badge>
+      ) : (
+        <Badge variant="destructive">{fmtOre(diff)}</Badge>
+      )}
+    </TableCell>
+    <TableCell className="text-right hidden sm:table-cell">
       {ritardoMin !== null ? (
         <Badge variant="destructive" className="gap-1">
           <AlertTriangle className="h-3 w-3" />
