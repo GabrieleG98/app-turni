@@ -138,16 +138,7 @@ const { error } = await supabase
     foto_out_url,
   })
   .eq("id", sessioneAttiva.id);
-      const orario = new Date();
-      const { error } = await supabase
-        .from("timbrature")
-        .update({
-          orario_clock_out: orario.toISOString(),
-          lat_out: coords?.lat ?? null,
-          lng_out: coords?.lng ?? null,
-          foto_out_url,
-        })
-        .eq("id", sessioneAttiva.id);
+      
       if (error) throw error;
       const ore = oreTimbratura(sessioneAttiva.orario_clock_in, orario.toISOString());
       setConferma({
