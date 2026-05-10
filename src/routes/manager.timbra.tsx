@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
-import { Play, Square, Clock, RotateCw } from "lucide-react";
+import { useRef, useState } from "react";
+import { Play, Square, Clock, RotateCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimbratura } from "@/hooks/use-timbratura";
 import { fmtRitardo } from "@/lib/timbra-window";
@@ -28,21 +28,28 @@ function ManagerTimbraPage() {
   } = useTimbratura();
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const [elaborando, setElaborando] = useState(false);
 
   const handleClick = () => {
     if (!canClock) return;
     fileRef.current?.click();
   };
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     e.target.value = "";
-    if (inTurno) clockOut(f);
-    else clockIn(f);
+    setElaborando(true);
+    try {
+      if (inTurno) await clockOut(f);
+      else await clockIn(f);
+    } finally {
+      setElaborando(false);
+    }
   };
 
   const isLate = !inTurno && windowState === "late";
-  const disabled = busy || !canClock;
+  const isLoading = busy || elaborando;
+  const disabled = isLoading || !canClock;
 
   const tooltip =
     windowState === "no-shift"
@@ -53,13 +60,17 @@ function ManagerTimbraPage() {
       ? "Turno passato — chiedi una correzione al manager"
       : "";
 
-  const label = inTurno
+  const label = isLoading
+    ? inTurno ? "Registrazione uscita…" : "Registrazione entrata…"
+    : inTurno
     ? "Termina sessione"
     : haGiaSessioni
     ? "Nuova sessione"
     : "Inizia sessione";
 
-  const Icon = inTurno
+  const Icon = isLoading
+    ? Loader2
+    : inTurno
     ? Square
     : haGiaSessioni
     ? RotateCw
@@ -76,9 +87,7 @@ function ManagerTimbraPage() {
           <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
             Turno di oggi
           </div>
-          <div className="font-bold text-lg capitalize">
-            {turnoOggi.tipo_turno}
-          </div>
+          <div className="font-bold text-lg capitalize">{turnoOggi.tipo_turno}</div>
           <div>
             {turnoOggi.ora_inizio.slice(0, 5)} –{" "}
             {turnoOggi.ora_fine.slice(0, 5)}
@@ -90,7 +99,9 @@ function ManagerTimbraPage() {
         <div
           className={cn(
             "w-24 h-24 rounded-full flex flex-col items-center justify-center text-sm font-semibold",
-            disabled
+            disabled && !isLoading
+              ? "bg-muted text-muted-foreground"
+              : isLoading
               ? "bg-muted text-muted-foreground"
               : inTurno
               ? "bg-destructive text-destructive-foreground"
@@ -99,17 +110,22 @@ function ManagerTimbraPage() {
               : "bg-brand-gradient text-brand-foreground",
           )}
         >
-          <Icon className="h-8 w-8 mb-1" />
-          {isLate && (
-            <span className="text-xs font-bold">
-              {fmtRitardo(minutiRitardo)}
-            </span>
+          <Icon className={cn("h-8 w-8 mb-1", isLoading && "animate-spin")} />
+          {isLate && !isLoading && (
+            <span className="text-xs font-bold">{fmtRitardo(minutiRitardo)}</span>
+          )}
+          {isLoading && (
+            <span className="text-xs">attendere…</span>
           )}
         </div>
 
-        {tooltip && (
-          <p className="text-sm text-muted-foreground text-center">
-            {tooltip}
+        {tooltip && !isLoading && (
+          <p className="text-sm text-muted-foreground text-center">{tooltip}</p>
+        )}
+
+        {isLoading && (
+          <p className="text-sm text-muted-foreground text-center animate-pulse">
+            Upload foto in corso…
           </p>
         )}
 
@@ -120,7 +136,7 @@ function ManagerTimbraPage() {
           onClick={handleClick}
           variant={inTurno ? "destructive" : "default"}
         >
-          <Icon className="h-5 w-5 mr-2" />
+          <Icon className={cn("h-5 w-5 mr-2", isLoading && "animate-spin")} />
           {label}
         </Button>
       </Card>
