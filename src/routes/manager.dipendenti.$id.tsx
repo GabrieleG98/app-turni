@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useServerFn } from "@tanstack/react-start";
 import { eliminaDipendente } from "@/lib/elimina-dipendente.functions";
+import { FotoTimbratura } from "@/components/foto-timbratura";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
@@ -206,29 +207,51 @@ function DettaglioDipendente() {
       </div>
 
       <Card className="p-4">
-        <h2 className="font-semibold mb-3">Timbrature</h2>
-        {timbrature.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
-        ) : (
-          <div className="space-y-2 text-sm">
-            {timbrature.map((t) => {
-              const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
-              return (
-                <div key={t.id} className="flex justify-between border-b pb-2 last:border-0">
-                  <span>{fmtData(t.data)}</span>
-                  <span className="text-muted-foreground">
-                    {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })} →{" "}
-                    {t.orario_clock_out
-                      ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
-                      : <em>in corso</em>}
-                  </span>
-                  <span className="font-medium">{ore !== null ? fmtOre(ore) : "—"}</span>
-                </div>
-              );
-            })}
+  <h2 className="font-semibold mb-3">Timbrature</h2>
+  {timbrature.length === 0 ? (
+    <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
+  ) : (
+    <div className="space-y-2 text-sm">
+      {timbrature.map((t) => {
+        const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
+        return (
+          <div key={t.id} className="flex items-center justify-between border-b pb-2 last:border-0 gap-2">
+            {/* Data */}
+            <span className="shrink-0 w-24">{fmtData(t.data)}</span>
+
+            {/* Foto entrata + orari + Foto uscita */}
+            <div className="flex items-center gap-2 flex-1 justify-center">
+              <FotoTimbratura
+                url={t.foto_in_url ?? null}
+                timbratura_id={t.id}
+                campo="foto_in_url"
+                onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+              />
+              <span className="text-muted-foreground tabular-nums">
+                {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                {" → "}
+                {t.orario_clock_out
+                  ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+                  : <em>in corso</em>}
+              </span>
+              <FotoTimbratura
+                url={t.foto_out_url ?? null}
+                timbratura_id={t.id}
+                campo="foto_out_url"
+                onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+              />
+            </div>
+
+            {/* Ore */}
+            <span className="font-medium shrink-0 w-12 text-right">
+              {ore !== null ? fmtOre(ore) : "—"}
+            </span>
           </div>
-        )}
-      </Card>
+        );
+      })}
+    </div>
+  )}
+</Card>
 
       {profilo && me !== id && ownerId !== id && (
         <Card className="p-6 border-destructive/40">
