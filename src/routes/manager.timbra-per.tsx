@@ -1,13 +1,13 @@
 import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Square, Loader2, Camera, Check } from "lucide-react";
+import { ArrowLeft, Play, Square, Loader2 } from "lucide-react";
 import { isoData } from "@/lib/date-utils";
 import { toast } from "sonner";
 
