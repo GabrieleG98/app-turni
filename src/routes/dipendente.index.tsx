@@ -4,10 +4,10 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fmtData, fmtOre, oreTraOrari } from "@/lib/date-utils";
+import { fmtData, fmtOre, oreTraOrari, isoData } from "@/lib/date-utils";
 import { Sparkles, Coffee, Pause as PauseIcon, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CorrezioneDialog } from "@/components/correzione-dialog";
 import { useTimbratura } from "@/hooks/use-timbratura";
 
@@ -33,6 +33,15 @@ function HomeOggi() {
 
   const oreP = turnoOggi ? oreTraOrari(turnoOggi.ora_inizio, turnoOggi.ora_fine, turnoOggi.data) : 0;
   const diff = oreLavorateOggi - oreP;
+
+  const ritardoMin = useMemo(() => {
+    if (!turnoOggi || sessioni.length === 0) return null;
+    const oggiStr = isoData(new Date());
+    const previsto = new Date(`${oggiStr}T${turnoOggi.ora_inizio}`);
+    const effettivo = new Date(sessioni[0].orario_clock_in);
+    const delta = Math.round((effettivo.getTime() - previsto.getTime()) / 60000);
+    return delta > 0 ? delta : null;
+  }, [turnoOggi, sessioni]);
 
   const startPausa = async (tipo: "pranzo" | "caffe" | "altro") => {
     if (!sessioneAttiva) return;
@@ -113,6 +122,17 @@ function HomeOggi() {
           )}
         </Card>
 
+        {/* ✅ Banner ritardo */}
+        {ritardoMin !== null && (
+          <Card className="p-3 border-destructive/50 bg-destructive/5 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+            <div className="text-sm">
+              <span className="font-semibold text-destructive">Entrata in ritardo</span>
+              <span className="text-muted-foreground ml-1">di {ritardoMin} min rispetto al turno</span>
+            </div>
+          </Card>
+        )}
+
         {haGiaSessioni && (
           <Card className="p-4 border-0 shadow-sm bg-brand-soft/50 space-y-3">
             <div className="flex items-center justify-between">
@@ -142,7 +162,6 @@ function HomeOggi() {
           </Card>
         )}
 
-        {/* Pause della sessione attiva */}
         {inTurno && (
           <Card className="p-4 border-0 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -192,7 +211,12 @@ function HomeOggi() {
           <AlertTriangle className="h-4 w-4 mr-2" /> Segnala errore timbratura
         </Button>
       </main>
-      <CorrezioneDialog open={corrOpen} onOpenChange={setCorrOpen} timbraturaId={sessioneAttiva?.id ?? sessioni[sessioni.length - 1]?.id ?? null} defaultDate={new Date().toISOString().slice(0, 10)} />
+      <CorrezioneDialog
+        open={corrOpen}
+        onOpenChange={setCorrOpen}
+        timbraturaId={sessioneAttiva?.id ?? sessioni[sessioni.length - 1]?.id ?? null}
+        defaultDate={new Date().toISOString().slice(0, 10)}
+      />
     </>
   );
 }
