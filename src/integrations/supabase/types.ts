@@ -711,10 +711,7 @@ export type Database = {
     Functions: {
       ensure_my_tasks: { Args: { _data?: string }; Returns: undefined }
       has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+        Args: { _role: string; _user_id: string }
         Returns: boolean
       }
       is_membro_canale: {
@@ -723,10 +720,7 @@ export type Database = {
       }
       is_owner: { Args: { _uid: string }; Returns: boolean }
       set_user_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+        Args: { _role: string; _user_id: string }
         Returns: undefined
       }
     }
