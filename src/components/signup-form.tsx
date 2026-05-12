@@ -8,8 +8,6 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-const INVITE_CODE = import.meta.env.VITE_INVITE_CODE ?? "4FUN2025";
-
 export function SignupForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -26,36 +24,37 @@ export function SignupForm() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (form.codice.trim() !== INVITE_CODE) {
-      toast.error("Codice invito non valido", {
-        description: "Contatta il tuo manager per ottenere il codice di accesso.",
-      });
-      return;
-    }
-
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: {
+
+    try {
+      const { data, error } = await supabase.functions.invoke("validate-invite", {
+        body: {
+          codice: form.codice.trim(),
+          email: form.email,
+          password: form.password,
           nome: form.nome,
           cognome: form.cognome,
         },
-      },
-    });
-    setLoading(false);
+      });
 
-    if (error) {
-      toast.error("Registrazione non riuscita", { description: error.message });
-      return;
+      if (error || data?.error) {
+        toast.error("Registrazione non riuscita", {
+          description: data?.error ?? error?.message ?? "Errore sconosciuto",
+        });
+        return;
+      }
+
+      toast.success("Account creato", {
+        description: "Puoi ora accedere. Il manager assegnerà il tuo ruolo.",
+      });
+      navigate({ to: "/login" });
+    } catch (err: unknown) {
+      toast.error("Errore di rete", {
+        description: err instanceof Error ? err.message : "Riprova tra poco.",
+      });
+    } finally {
+      setLoading(false);
     }
-    toast.success("Account creato", {
-      description: "Controlla la tua email per confermare. Il manager assegnerà il tuo ruolo.",
-    });
-    navigate({ to: "/login" });
   };
 
   return (
