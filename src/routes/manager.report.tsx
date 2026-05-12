@@ -3,10 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -23,14 +27,15 @@ export const Route = createFileRoute("/manager/report")({
 
 function Report() {
   const [inizio, setInizio] = useState(inizioSettimana());
+  const [reparto, setReparto] = useState<string>("tutti");
   const fine = addDays(inizio, 6);
 
-  const { data: profili = [] } = useQuery({
+  const { data: profili = [], isLoading: loadingProfili } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => (await supabase.from("profiles").select("*").order("cognome")).data ?? [],
   });
 
-  const { data: turni = [] } = useQuery({
+  const { data: turni = [], isLoading: loadingTurni } = useQuery({
     queryKey: ["turni-rep", isoData(inizio)],
     queryFn: async () => (await supabase.from("turni").select("*")
       .gte("data", isoData(inizio)).lte("data", isoData(fine))).data ?? [],
@@ -49,7 +54,14 @@ function Report() {
       .lte("inizio", new Date(isoData(fine) + "T23:59:59").toISOString())).data ?? [],
   });
 
-  const righe = useMemo(() => profili.map((p) => {
+  const isLoading = loadingProfili || loadingTurni;
+
+  const reparti = useMemo(
+    () => Array.from(new Set(profili.map((p) => p.reparto).filter(Boolean))).sort() as string[],
+    [profili],
+  );
+
+  const tutteLighe = useMemo(() => profili.map((p) => {
     const oreP = turni.filter((t) => t.dipendente_id === p.id)
       .reduce((s, t) => s + oreTraOrari(t.ora_inizio, t.ora_fine, t.data), 0);
     const minPause = pause.filter((x) => x.dipendente_id === p.id && x.fine)
@@ -60,6 +72,11 @@ function Report() {
     const straord = Math.max(0, oreE - oreP);
     return { p, oreP, oreE, oreLordo, minPause, straord, diff: oreE - oreP };
   }), [profili, turni, timbrature, pause]);
+
+  const righe = useMemo(
+    () => reparto === "tutti" ? tutteLighe : tutteLighe.filter((r) => r.p.reparto === reparto),
+    [tutteLighe, reparto],
+  );
 
   const esportaExcel = () => {
     const titolo = `Report ore · ${format(inizio, "dd/MM/yyyy")} – ${format(fine, "dd/MM/yyyy")}`;
@@ -101,42 +118,31 @@ function Report() {
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    // Larghezza colonne
     ws["!cols"] = [
       { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
       { wch: 16 }, { wch: 12 }, { wch: 12 },
       { wch: 12 }, { wch: 14 }, { wch: 12 },
     ];
-
-    // Merge titolo su tutte le colonne
     ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: header.length - 1 } }];
-
-    // Bold header (riga 3, indice 2)
     const headerRowIdx = 2;
     for (let c = 0; c < header.length; c++) {
       const ref = XLSX.utils.encode_cell({ r: headerRowIdx, c });
       const cell = ws[ref];
       if (cell) cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
     }
-    // Bold titolo
     if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 14 } };
-    // Bold totali
     const totRow = aoa.length - 1;
     for (let c = 0; c < header.length; c++) {
       const ref = XLSX.utils.encode_cell({ r: totRow, c });
       const cell = ws[ref];
       if (cell) cell.s = { font: { bold: true } };
     }
-
-    // Format numerico
     for (let r = 3; r < 3 + dataRows.length; r++) {
       for (const c of [4, 5, 7, 8, 9]) {
         const ref = XLSX.utils.encode_cell({ r, c });
         if (ws[ref]) ws[ref].z = "0.00";
       }
     }
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report ore");
     XLSX.writeFile(wb, `report-ore-${isoData(inizio)}.xlsx`);
@@ -144,7 +150,7 @@ function Report() {
   };
 
   const { user } = useAuth();
-  const mia = righe.find((r) => r.p.id === user?.id);
+  const mia = tutteLighe.find((r) => r.p.id === user?.id);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -152,6 +158,7 @@ function Report() {
         <h1 className="text-2xl font-bold">Report ore</h1>
         <p className="text-sm text-muted-foreground">Riepilogo settimanale</p>
       </div>
+
       <Card className="p-4 flex items-center gap-3 flex-wrap">
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, -1))}>
           <ChevronLeft className="h-4 w-4" />
@@ -160,7 +167,21 @@ function Report() {
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button className="ml-auto" onClick={esportaExcel}>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Reparto:</span>
+          <Select value={reparto} onValueChange={setReparto}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tutti">Tutti i reparti</SelectItem>
+              {reparti.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={esportaExcel}>
           <FileSpreadsheet className="h-4 w-4 mr-2" /> Esporta Excel
         </Button>
       </Card>
@@ -190,6 +211,7 @@ function Report() {
           </div>
         </Card>
       )}
+
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -202,22 +224,34 @@ function Report() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {righe.map(({ p, oreP, oreE, diff }) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">
-                  {p.nome} {p.cognome}
-                  <div className="text-xs text-muted-foreground sm:hidden">{p.reparto || "—"} · pian. {fmtOre(oreP)}</div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">{p.reparto || "—"}</TableCell>
-                <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
-                <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
-                <TableCell className={`text-right font-medium ${
-                  Math.abs(diff) < 0.05 ? "" : diff > 0 ? "text-foreground" : "text-destructive"
-                }`}>
-                  {diff > 0 ? "+" : ""}{fmtOre(diff)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              righe.map(({ p, oreP, oreE, diff }) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">
+                    {p.nome} {p.cognome}
+                    <div className="text-xs text-muted-foreground sm:hidden">{p.reparto || "—"} · pian. {fmtOre(oreP)}</div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">{p.reparto || "—"}</TableCell>
+                  <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
+                  <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
+                  <TableCell className={`text-right font-medium ${
+                    Math.abs(diff) < 0.05 ? "" : diff > 0 ? "text-foreground" : "text-destructive"
+                  }`}>
+                    {diff > 0 ? "+" : ""}{fmtOre(diff)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>
