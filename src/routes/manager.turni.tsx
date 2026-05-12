@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -77,7 +78,7 @@ interface TurnoForm {
 
 interface TemplateRow {
   dipendente_id: string;
-  giorno_settimana: number; // 0=lun ... 6=dom (in linea con date-utils)
+  giorno_settimana: number;
   ora_inizio: string;
   ora_fine: string;
   tipo_turno: string;
@@ -99,8 +100,9 @@ function GestioneTurni() {
   const [applicaTplOpen, setApplicaTplOpen] = useState(false);
   const [tplNome, setTplNome] = useState("");
   const [tplSelected, setTplSelected] = useState<string>("");
+  const [filtroReparto, setFiltroReparto] = useState<string>("tutti");
 
-  const { data: profili = [] } = useQuery({
+  const { data: profili = [], isLoading: loadingProfili } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("*").order("cognome");
@@ -108,7 +110,7 @@ function GestioneTurni() {
     },
   });
 
-  const { data: turni = [] } = useQuery({
+  const { data: turni = [], isLoading: loadingTurni } = useQuery({
     queryKey: ["turni-settimana", isoData(inizio)],
     queryFn: async () => {
       const { data } = await supabase
@@ -131,6 +133,18 @@ function GestioneTurni() {
     },
   });
 
+  const reparti = useMemo(
+    () => Array.from(new Set(profili.map((p) => p.reparto).filter(Boolean))).sort() as string[],
+    [profili],
+  );
+
+  const profiliFiltrati = useMemo(
+    () => filtroReparto === "tutti" ? profili : profili.filter((p) => p.reparto === filtroReparto),
+    [profili, filtroReparto],
+  );
+
+  const profiliIds = useMemo(() => new Set(profili.map((p) => p.id)), [profili]);
+
   const turniByCell = useMemo(() => {
     const m = new Map<string, typeof turni>();
     turni.forEach((t) => {
@@ -139,7 +153,6 @@ function GestioneTurni() {
       arr.push(t);
       m.set(k, arr);
     });
-    // Ordina per ora_inizio dentro ogni cella
     m.forEach((arr) => arr.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio)));
     return m;
   }, [turni]);
@@ -213,7 +226,16 @@ function GestioneTurni() {
     qc.invalidateQueries({ queryKey: ["turni-settimana"] });
   };
 
+  // FIX: controlla duplicati prima di copiare
   const copiaSettimana = async () => {
+    // Verifica se esistono già turni nella settimana corrente
+    if (turni.length > 0) {
+      toast.error("Settimana non vuota", {
+        description: `Ci sono già ${turni.length} turni questa settimana. Eliminali prima di copiare.`,
+      });
+      setCopiaOpen(false);
+      return;
+    }
     const settPrec = addWeeks(inizio, -1);
     const finePrec = addDays(settPrec, 6);
     const { data: source } = await supabase
@@ -246,19 +268,38 @@ function GestioneTurni() {
     setCopiaOpen(false);
   };
 
+  // FIX: invia notifiche in-app ai dipendenti coinvolti alla pubblicazione
   const pubblicaSettimana = async () => {
+    // Trova i turni in bozza con i relativi dipendente_id univoci
+    const bozzeTurni = turni.filter((t) => !t.pubblicato);
+    const dipIds = Array.from(new Set(bozzeTurni.map((t) => t.dipendente_id)));
+
     const { error, count } = await supabase
       .from("turni")
       .update({ pubblicato: true }, { count: "exact" })
       .gte("data", isoData(inizio))
       .lte("data", isoData(fine))
       .eq("pubblicato", false);
+
     if (error) {
       toast.error("Errore pubblicazione", { description: error.message });
-    } else {
-      toast.success(`${count ?? 0} turni pubblicati. I dipendenti possono vederli ora.`);
-      qc.invalidateQueries({ queryKey: ["turni-settimana"] });
+      setPubblicaOpen(false);
+      return;
     }
+
+    // Invia notifiche in-app a ciascun dipendente coinvolto
+    if (dipIds.length > 0) {
+      const notifiche = dipIds.map((id) => ({
+        user_id: id,
+        titolo: "Turni pubblicati 📅",
+        descrizione: `I tuoi turni per la settimana del ${format(inizio, "dd/MM/yyyy")} sono ora disponibili.`,
+        link: "/dipendente/turni",
+      }));
+      await supabase.from("notifiche").insert(notifiche);
+    }
+
+    toast.success(`${count ?? 0} turni pubblicati. I dipendenti sono stati notificati.`);
+    qc.invalidateQueries({ queryKey: ["turni-settimana"] });
     setPubblicaOpen(false);
   };
 
@@ -271,7 +312,7 @@ function GestioneTurni() {
     if (!user) return;
     const payload: TemplateRow[] = turni.map((t) => ({
       dipendente_id: t.dipendente_id,
-      giorno_settimana: ((getDay(new Date(t.data)) + 6) % 7), // converti su lun=0
+      giorno_settimana: ((getDay(new Date(t.data)) + 6) % 7),
       ora_inizio: t.ora_inizio,
       ora_fine: t.ora_fine,
       tipo_turno: t.tipo_turno,
@@ -293,6 +334,7 @@ function GestioneTurni() {
     }
   };
 
+  // FIX: filtra dipendenti inesistenti prima di inserire dal template
   const applicaTemplate = async () => {
     if (!tplSelected) return;
     const tpl = templates.find((t) => t.id === tplSelected);
@@ -302,7 +344,14 @@ function GestioneTurni() {
       toast.info("Template vuoto");
       return;
     }
-    const nuovi = rows.map((r) => ({
+    // Filtra righe con dipendente_id ancora esistenti
+    const righeValide = rows.filter((r) => profiliIds.has(r.dipendente_id));
+    const saltati = rows.length - righeValide.length;
+    if (righeValide.length === 0) {
+      toast.error("Nessun dipendente del template è ancora attivo");
+      return;
+    }
+    const nuovi = righeValide.map((r) => ({
       dipendente_id: r.dipendente_id,
       data: isoData(addDays(inizio, r.giorno_settimana)),
       ora_inizio: r.ora_inizio,
@@ -316,12 +365,17 @@ function GestioneTurni() {
     if (error) {
       toast.error("Errore applicazione template", { description: error.message });
     } else {
-      toast.success(`${nuovi.length} turni applicati come bozza`);
+      const msg = saltati > 0
+        ? `${nuovi.length} turni applicati (${saltati} saltati: dipendenti non trovati)`
+        : `${nuovi.length} turni applicati come bozza`;
+      toast.success(msg);
       qc.invalidateQueries({ queryKey: ["turni-settimana"] });
     }
     setApplicaTplOpen(false);
     setTplSelected("");
   };
+
+  const isLoading = loadingProfili || loadingTurni;
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -373,7 +427,7 @@ function GestioneTurni() {
         </div>
       </div>
 
-      <Card className="p-4 flex items-center gap-3">
+      <Card className="p-4 flex items-center gap-3 flex-wrap">
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, -1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -384,99 +438,127 @@ function GestioneTurni() {
         <Button variant="ghost" size="sm" onClick={() => setInizio(inizioSettimana())}>
           Oggi
         </Button>
+        {/* NUOVO: filtro reparto griglia */}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Reparto:</span>
+          <Select value={filtroReparto} onValueChange={setFiltroReparto}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tutti">Tutti i reparti</SelectItem>
+              {reparti.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </Card>
 
       <Card className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/40">
-              <th className="text-left p-3 font-medium sticky left-0 bg-muted/40 min-w-[180px]">
-                Dipendente
-              </th>
-              {giorni.map((g, i) => {
-                const oggi = isoData(g) === isoData(new Date());
-                return (
-                  <th
-                    key={i}
-                    className={`p-2 text-center font-medium min-w-[140px] ${oggi ? "bg-brand text-brand-foreground rounded-md" : ""}`}
-                  >
-                    <div>{GIORNI[i]}</div>
-                    <div className={`text-xs ${oggi ? "text-brand-foreground/80" : "text-muted-foreground"}`}>{format(g, "dd/MM")}</div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {profili.length === 0 && (
-              <tr>
-                <td colSpan={8} className="text-center text-muted-foreground py-8">
-                  Nessun dipendente registrato
-                </td>
-              </tr>
-            )}
-            {profili.map((p) => (
-              <tr key={p.id} className="border-b">
-                <td className="p-3 sticky left-0 bg-background font-medium">
-                  <div>{p.nome} {p.cognome}</div>
-                  <div className="text-xs text-muted-foreground">{p.ruolo_lavoro}</div>
-                </td>
-                {giorni.map((g) => {
-                  const dataIso = isoData(g);
-                  const lista = turniByCell.get(`${p.id}|${dataIso}`) ?? [];
-                  const usati = new Set(lista.map((x) => x.tipo_turno));
-                  const disponibili: ("mattina" | "pomeriggio" | "sera")[] =
-                    (["mattina", "pomeriggio", "sera"] as const).filter((x) => !usati.has(x));
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-10 w-40 shrink-0" />
+                {Array.from({ length: 7 }).map((__, j) => (
+                  <Skeleton key={j} className="h-10 flex-1" />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/40">
+                <th className="text-left p-3 font-medium sticky left-0 bg-muted/40 min-w-[180px]">
+                  Dipendente
+                </th>
+                {giorni.map((g, i) => {
+                  const oggi = isoData(g) === isoData(new Date());
                   return (
-                    <td key={dataIso} className="p-1.5 align-top">
-                      {lista.length === 0 ? (
-                        <button
-                          onClick={() => nuovoTurno(p.id, dataIso)}
-                          className="w-full rounded-md p-2 text-xs bg-turno-libero text-turno-libero-foreground text-center opacity-60 hover:opacity-100 transition"
-                        >
-                          Libero
-                        </button>
-                      ) : (
-                        <div className="space-y-1">
-                          {lista.map((t) => {
-                            const ore = oreTraOrari(t.ora_inizio, t.ora_fine, t.data);
-                            return (
-                              <button
-                                key={t.id}
-                                onClick={() => apriTurno(t)}
-                                className={`w-full rounded-md p-1.5 text-left text-xs transition hover:opacity-80 relative ${COLORE_TURNO[t.tipo_turno]} ${!t.pubblicato ? "ring-2 ring-dashed ring-foreground/40" : ""}`}
-                              >
-                                <div className="font-semibold capitalize flex items-center gap-1 leading-tight">
-                                  <span className="truncate">{t.tipo_turno}</span>
-                                  {!t.pubblicato && (
-                                    <span className="text-[9px] uppercase bg-background/50 px-1 rounded">
-                                      bozza
-                                    </span>
-                                  )}
-                                  <span className="ml-auto text-[10px] opacity-70 font-normal">{ore.toFixed(1)}h</span>
-                                </div>
-                                <div className="leading-tight">{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
-                                {t.location && <div className="opacity-80 truncate text-[10px]">{t.location}</div>}
-                              </button>
-                            );
-                          })}
-                          {disponibili.length > 0 && (
-                            <button
-                              onClick={() => nuovoTurno(p.id, dataIso, disponibili[0])}
-                              className="w-full rounded-md py-1 text-[10px] border border-dashed border-foreground/20 text-muted-foreground hover:bg-muted hover:text-foreground transition"
-                            >
-                              + {disponibili[0]}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                    <th
+                      key={i}
+                      className={`p-2 text-center font-medium min-w-[140px] ${oggi ? "bg-brand text-brand-foreground rounded-md" : ""}`}
+                    >
+                      <div>{GIORNI[i]}</div>
+                      <div className={`text-xs ${oggi ? "text-brand-foreground/80" : "text-muted-foreground"}`}>{format(g, "dd/MM")}</div>
+                    </th>
                   );
                 })}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {profiliFiltrati.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center text-muted-foreground py-8">
+                    {profili.length === 0 ? "Nessun dipendente registrato" : "Nessun dipendente in questo reparto"}
+                  </td>
+                </tr>
+              )}
+              {profiliFiltrati.map((p) => (
+                <tr key={p.id} className="border-b">
+                  <td className="p-3 sticky left-0 bg-background font-medium">
+                    <div>{p.nome} {p.cognome}</div>
+                    <div className="text-xs text-muted-foreground">{p.ruolo_lavoro}</div>
+                  </td>
+                  {giorni.map((g) => {
+                    const dataIso = isoData(g);
+                    const lista = turniByCell.get(`${p.id}|${dataIso}`) ?? [];
+                    const usati = new Set(lista.map((x) => x.tipo_turno));
+                    const disponibili: ("mattina" | "pomeriggio" | "sera")[] =
+                      (["mattina", "pomeriggio", "sera"] as const).filter((x) => !usati.has(x));
+                    return (
+                      <td key={dataIso} className="p-1.5 align-top">
+                        {lista.length === 0 ? (
+                          <button
+                            onClick={() => nuovoTurno(p.id, dataIso)}
+                            className="w-full rounded-md p-2 text-xs bg-turno-libero text-turno-libero-foreground text-center opacity-60 hover:opacity-100 transition"
+                          >
+                            Libero
+                          </button>
+                        ) : (
+                          <div className="space-y-1">
+                            {lista.map((t) => {
+                              const ore = oreTraOrari(t.ora_inizio, t.ora_fine, t.data);
+                              return (
+                                <button
+                                  key={t.id}
+                                  onClick={() => apriTurno(t)}
+                                  className={`w-full rounded-md p-1.5 text-left text-xs transition hover:opacity-80 relative ${COLORE_TURNO[t.tipo_turno]} ${!t.pubblicato ? "ring-2 ring-dashed ring-foreground/40" : ""}`}
+                                >
+                                  <div className="font-semibold capitalize flex items-center gap-1 leading-tight">
+                                    <span className="truncate">{t.tipo_turno}</span>
+                                    {!t.pubblicato && (
+                                      <span className="text-[9px] uppercase bg-background/50 px-1 rounded">
+                                        bozza
+                                      </span>
+                                    )}
+                                    <span className="ml-auto text-[10px] opacity-70 font-normal">{ore.toFixed(1)}h</span>
+                                  </div>
+                                  <div className="leading-tight">{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
+                                  {t.location && <div className="opacity-80 truncate text-[10px]">{t.location}</div>}
+                                </button>
+                              );
+                            })}
+                            {disponibili.length > 0 && (
+                              <button
+                                onClick={() => nuovoTurno(p.id, dataIso, disponibili[0])}
+                                className="w-full rounded-md py-1 text-[10px] border border-dashed border-foreground/20 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                              >
+                                + {disponibili[0]}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
@@ -575,7 +657,12 @@ function GestioneTurni() {
           <AlertDialogHeader>
             <AlertDialogTitle>Copia settimana precedente</AlertDialogTitle>
             <AlertDialogDescription>
-              Tutti i turni della settimana precedente verranno duplicati su questa settimana come bozza (non visibili ai dipendenti).
+              Tutti i turni della settimana precedente verranno duplicati su questa settimana come bozza.
+              {turni.length > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  ⚠️ Attenzione: ci sono già {turni.length} turni questa settimana. L'operazione verrà bloccata.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -590,7 +677,7 @@ function GestioneTurni() {
           <AlertDialogHeader>
             <AlertDialogTitle>Pubblicare la settimana?</AlertDialogTitle>
             <AlertDialogDescription>
-              {totali.bozza} turni in bozza diventeranno visibili ai dipendenti.
+              {totali.bozza} turni in bozza diventeranno visibili ai dipendenti, che riceveranno una notifica.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -626,7 +713,7 @@ function GestioneTurni() {
           <DialogHeader>
             <DialogTitle>Applica template alla settimana</DialogTitle>
             <DialogDescription>
-              I turni del template verranno aggiunti come bozza alla settimana selezionata.
+              I turni del template verranno aggiunti come bozza. I dipendenti non più attivi verranno saltati automaticamente.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
