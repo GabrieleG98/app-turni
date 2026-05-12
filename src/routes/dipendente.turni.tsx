@@ -87,25 +87,59 @@ function MieiTurni() {
   const swapMap = new Map(mieiSwap.map((s) => [s.turno_id, s.status]));
 
   const inviaSwap = async () => {
-    if (!swap || !user) return;
-    if (!swap.a_dipendente) {
-      toast.error("Scegli un collega");
-      return;
-    }
-    const { error } = await supabase.from("turno_swap_requests").insert({
-      turno_id: swap.turno_id,
-      da_dipendente: user.id,
-      a_dipendente: swap.a_dipendente,
-      motivo: swap.motivo || null,
-    });
-    if (error) {
-      toast.error("Errore invio richiesta", { description: error.message });
-    } else {
-      toast.success("Richiesta inviata al manager");
-      setSwap(null);
-      qc.invalidateQueries({ queryKey: ["miei-swap"] });
-    }
-  };
+  if (!swap || !user) return;
+  if (!swap.a_dipendente) {
+    toast.error("Scegli un collega");
+    return;
+  }
+
+  // 1) Inserisci la richiesta di scambio
+  const { error } = await supabase.from("turno_swap_requests").insert({
+    turno_id: swap.turno_id,
+    da_dipendente: user.id,
+    a_dipendente: swap.a_dipendente,
+    motivo: swap.motivo || null,
+  });
+
+  if (error) {
+    toast.error("Errore invio richiesta", { description: error.message });
+    return;
+  }
+
+  // 2) Recupera i manager/owner da notificare
+  const { data: managers } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("ruolo", ["manager", "owner"]);
+
+  if (managers && managers.length > 0) {
+    // Recupera nome del richiedente e info turno per il testo
+    const turno = turni.find((t) => t.id === swap.turno_id);
+    const { data: profilo } = await supabase
+      .from("profiles")
+      .select("nome, cognome")
+      .eq("id", user.id)
+      .single();
+
+    const nomeRichiedente = profilo ? `${profilo.nome} ${profilo.cognome}` : "Un dipendente";
+    const turnoLabel = turno
+      ? `${turno.data} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
+      : "un turno";
+
+    const notifiche = managers.map((m) => ({
+      user_id: m.id,
+      titolo: "Nuova richiesta di scambio turno",
+      descrizione: `${nomeRichiedente} ha richiesto uno scambio per ${turnoLabel}.`,
+      link: "/manager/scambi",
+    }));
+
+    await supabase.from("notifiche").insert(notifiche);
+  }
+
+  toast.success("Richiesta inviata al manager");
+  setSwap(null);
+  qc.invalidateQueries({ queryKey: ["miei-swap"] });
+};
 
   return (
     <>
