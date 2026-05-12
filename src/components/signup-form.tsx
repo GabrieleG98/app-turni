@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+const INVITE_CODE = import.meta.env.VITE_INVITE_CODE ?? "4FUN2025";
+
 export function SignupForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -15,8 +17,7 @@ export function SignupForm() {
     password: "",
     nome: "",
     cognome: "",
-    ruolo_lavoro: "",
-    reparto: "",
+    codice: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,14 @@ export function SignupForm() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (form.codice.trim() !== INVITE_CODE) {
+      toast.error("Codice invito non valido", {
+        description: "Contatta il tuo manager per ottenere il codice di accesso.",
+      });
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: form.email,
@@ -34,17 +43,18 @@ export function SignupForm() {
         data: {
           nome: form.nome,
           cognome: form.cognome,
-          ruolo_lavoro: form.ruolo_lavoro,
-          reparto: form.reparto,
         },
       },
     });
     setLoading(false);
+
     if (error) {
       toast.error("Registrazione non riuscita", { description: error.message });
       return;
     }
-    toast.success("Account creato", { description: "Controlla la tua email per confermare." });
+    toast.success("Account creato", {
+      description: "Controlla la tua email per confermare. Il manager assegnerà il tuo ruolo.",
+    });
     navigate({ to: "/login" });
   };
 
@@ -69,14 +79,6 @@ export function SignupForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ruolo_lavoro">Ruolo (es. Animatore, DJ)</Label>
-            <Input id="ruolo_lavoro" value={form.ruolo_lavoro} onChange={set("ruolo_lavoro")} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="reparto">Reparto (es. Intrattenimento)</Label>
-            <Input id="reparto" value={form.reparto} onChange={set("reparto")} />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={form.email} onChange={set("email")} required />
           </div>
@@ -89,6 +91,16 @@ export function SignupForm() {
               onChange={set("password")}
               required
               minLength={6}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="codice">Codice invito</Label>
+            <Input
+              id="codice"
+              value={form.codice}
+              onChange={set("codice")}
+              placeholder="Chiedi il codice al tuo manager"
+              required
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
