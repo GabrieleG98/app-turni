@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Unisciti4funRouteImport } from './routes/unisciti-4fun'
+import { Route as RegistratiRouteImport } from './routes/registrati'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DipendenteRouteImport } from './routes/dipendente'
@@ -37,6 +38,11 @@ import { Route as ApiPublicHooksTaskReminderRouteImport } from './routes/api/pub
 const Unisciti4funRoute = Unisciti4funRouteImport.update({
   id: '/unisciti-4fun',
   path: '/unisciti-4fun',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistratiRoute = RegistratiRouteImport.update({
+  id: '/registrati',
+  path: '/registrati',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerRoute = ManagerRouteImport.update({
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof CalendarioRoute
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
+  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendario': typeof CalendarioRoute
   '/login': typeof LoginRoute
+  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/calendario': typeof CalendarioRoute
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
+  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/dipendente'
     | '/login'
+    | '/registrati'
     | '/manager'
     | '/unisciti-4fun'
     | '/dipendente/chat'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calendario'
     | '/login'
+    | '/registrati'
     | '/manager'
     | '/unisciti-4fun'
     | '/dipendente/chat'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/dipendente'
     | '/login'
+    | '/registrati'
     | '/manager'
     | '/unisciti-4fun'
     | '/dipendente/chat'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   CalendarioRoute: typeof CalendarioRoute
   DipendenteRoute: typeof DipendenteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RegistratiRoute: typeof RegistratiRoute
   ManagerRoute: typeof ManagerRouteWithChildren
   Unisciti4funRoute: typeof Unisciti4funRoute
   ApiPublicHooksTaskReminderRoute: typeof ApiPublicHooksTaskReminderRoute
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       path: '/unisciti-4fun'
       fullPath: '/unisciti-4fun'
       preLoaderRoute: typeof Unisciti4funRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registrati': {
+      id: '/registrati'
+      path: '/registrati'
+      fullPath: '/registrati'
+      preLoaderRoute: typeof RegistratiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager': {
@@ -555,6 +575,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarioRoute: CalendarioRoute,
   DipendenteRoute: DipendenteRouteWithChildren,
   LoginRoute: LoginRoute,
+  RegistratiRoute: RegistratiRoute,
   ManagerRoute: ManagerRouteWithChildren,
   Unisciti4funRoute: Unisciti4funRoute,
   ApiPublicHooksTaskReminderRoute: ApiPublicHooksTaskReminderRoute,
