@@ -36,9 +36,10 @@ export function FotoTimbratura({ url, timbratura_id, campo, onDeleted }: FotoTim
 
   const elimina = async () => {
     setDeleting(true);
+    const patch = (campo === "foto_in_url" ? { foto_in_url: null } : { foto_out_url: null });
     const { error } = await supabase
       .from("timbrature")
-      .update({ [campo]: null })
+      .update(patch)
       .eq("id", timbratura_id);
     if (error) {
       toast.error("Errore eliminazione foto", { description: error.message });
