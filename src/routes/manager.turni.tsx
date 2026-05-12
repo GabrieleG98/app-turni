@@ -56,7 +56,9 @@ export const Route = createFileRoute("/manager/turni")({
 const DEFAULT_ORARI: Record<string, { i: string; f: string }> = {
   mattina: { i: "09:00", f: "13:00" },
   pomeriggio: { i: "14:00", f: "18:00" },
-  sera: { i: "20:00", f: "00:00" },
+  // FIX: "00:00" era ambiguo (mezzanotte dello stesso giorno).
+  // "23:59" è chiaro e oreTraOrari lo gestisce correttamente.
+  sera: { i: "20:00", f: "23:59" },
 };
 
 const COLORE_TURNO: Record<string, string> = {
@@ -228,7 +230,6 @@ function GestioneTurni() {
 
   // FIX: controlla duplicati prima di copiare
   const copiaSettimana = async () => {
-    // Verifica se esistono già turni nella settimana corrente
     if (turni.length > 0) {
       toast.error("Settimana non vuota", {
         description: `Ci sono già ${turni.length} turni questa settimana. Eliminali prima di copiare.`,
@@ -270,7 +271,6 @@ function GestioneTurni() {
 
   // FIX: invia notifiche in-app ai dipendenti coinvolti alla pubblicazione
   const pubblicaSettimana = async () => {
-    // Trova i turni in bozza con i relativi dipendente_id univoci
     const bozzeTurni = turni.filter((t) => !t.pubblicato);
     const dipIds = Array.from(new Set(bozzeTurni.map((t) => t.dipendente_id)));
 
@@ -287,7 +287,6 @@ function GestioneTurni() {
       return;
     }
 
-    // Invia notifiche in-app a ciascun dipendente coinvolto
     if (dipIds.length > 0) {
       const notifiche = dipIds.map((id) => ({
         user_id: id,
@@ -344,7 +343,6 @@ function GestioneTurni() {
       toast.info("Template vuoto");
       return;
     }
-    // Filtra righe con dipendente_id ancora esistenti
     const righeValide = rows.filter((r) => profiliIds.has(r.dipendente_id));
     const saltati = rows.length - righeValide.length;
     if (righeValide.length === 0) {
