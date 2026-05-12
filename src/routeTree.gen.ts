@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Unisciti4funRouteImport } from './routes/unisciti-4fun'
-import { Route as RegistratiRouteImport } from './routes/registrati'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DipendenteRouteImport } from './routes/dipendente'
@@ -25,13 +24,11 @@ import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
 import { Route as ManagerProfiloRouteImport } from './routes/manager.profilo'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
-import { Route as ManagerCorrezioniRouteImport } from './routes/manager.correzioni'
 import { Route as ManagerChatRouteImport } from './routes/manager.chat'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
 import { Route as DipendenteTimbraRouteImport } from './routes/dipendente.timbra'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
 import { Route as DipendenteProfiloRouteImport } from './routes/dipendente.profilo'
-import { Route as DipendenteCorrezioniRouteImport } from './routes/dipendente.correzioni'
 import { Route as DipendenteChatRouteImport } from './routes/dipendente.chat'
 import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
 import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
@@ -40,11 +37,6 @@ import { Route as ApiPublicHooksTaskReminderRouteImport } from './routes/api/pub
 const Unisciti4funRoute = Unisciti4funRouteImport.update({
   id: '/unisciti-4fun',
   path: '/unisciti-4fun',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegistratiRoute = RegistratiRouteImport.update({
-  id: '/registrati',
-  path: '/registrati',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerRoute = ManagerRouteImport.update({
@@ -117,11 +109,6 @@ const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ManagerRoute,
 } as any)
-const ManagerCorrezioniRoute = ManagerCorrezioniRouteImport.update({
-  id: '/correzioni',
-  path: '/correzioni',
-  getParentRoute: () => ManagerRoute,
-} as any)
 const ManagerChatRoute = ManagerChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -145,11 +132,6 @@ const DipendenteTasksRoute = DipendenteTasksRouteImport.update({
 const DipendenteProfiloRoute = DipendenteProfiloRouteImport.update({
   id: '/profilo',
   path: '/profilo',
-  getParentRoute: () => DipendenteRoute,
-} as any)
-const DipendenteCorrezioniRoute = DipendenteCorrezioniRouteImport.update({
-  id: '/correzioni',
-  path: '/correzioni',
   getParentRoute: () => DipendenteRoute,
 } as any)
 const DipendenteChatRoute = DipendenteChatRouteImport.update({
@@ -180,16 +162,13 @@ export interface FileRoutesByFullPath {
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
-  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
-  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
-  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -208,16 +187,13 @@ export interface FileRoutesByTo {
   '/calendario': typeof CalendarioRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
-  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
-  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
-  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -238,16 +214,13 @@ export interface FileRoutesById {
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRouteWithChildren
-  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
   '/dipendente/chat': typeof DipendenteChatRoute
-  '/dipendente/correzioni': typeof DipendenteCorrezioniRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
   '/manager/chat': typeof ManagerChatRoute
-  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -269,16 +242,13 @@ export interface FileRouteTypes {
     | '/dipendente'
     | '/login'
     | '/manager'
-    | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
-    | '/dipendente/correzioni'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
-    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -297,16 +267,13 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/login'
     | '/manager'
-    | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
-    | '/dipendente/correzioni'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
-    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -326,16 +293,13 @@ export interface FileRouteTypes {
     | '/dipendente'
     | '/login'
     | '/manager'
-    | '/registrati'
     | '/unisciti-4fun'
     | '/dipendente/chat'
-    | '/dipendente/correzioni'
     | '/dipendente/profilo'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
     | '/manager/chat'
-    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -356,7 +320,6 @@ export interface RootRouteChildren {
   DipendenteRoute: typeof DipendenteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRouteWithChildren
-  RegistratiRoute: typeof RegistratiRoute
   Unisciti4funRoute: typeof Unisciti4funRoute
   ApiPublicHooksTaskReminderRoute: typeof ApiPublicHooksTaskReminderRoute
 }
@@ -368,13 +331,6 @@ declare module '@tanstack/react-router' {
       path: '/unisciti-4fun'
       fullPath: '/unisciti-4fun'
       preLoaderRoute: typeof Unisciti4funRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/registrati': {
-      id: '/registrati'
-      path: '/registrati'
-      fullPath: '/registrati'
-      preLoaderRoute: typeof RegistratiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager': {
@@ -475,13 +431,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDashboardRouteImport
       parentRoute: typeof ManagerRoute
     }
-    '/manager/correzioni': {
-      id: '/manager/correzioni'
-      path: '/correzioni'
-      fullPath: '/manager/correzioni'
-      preLoaderRoute: typeof ManagerCorrezioniRouteImport
-      parentRoute: typeof ManagerRoute
-    }
     '/manager/chat': {
       id: '/manager/chat'
       path: '/chat'
@@ -517,13 +466,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DipendenteProfiloRouteImport
       parentRoute: typeof DipendenteRoute
     }
-    '/dipendente/correzioni': {
-      id: '/dipendente/correzioni'
-      path: '/correzioni'
-      fullPath: '/dipendente/correzioni'
-      preLoaderRoute: typeof DipendenteCorrezioniRouteImport
-      parentRoute: typeof DipendenteRoute
-    }
     '/dipendente/chat': {
       id: '/dipendente/chat'
       path: '/chat'
@@ -557,7 +499,6 @@ declare module '@tanstack/react-router' {
 
 interface DipendenteRouteChildren {
   DipendenteChatRoute: typeof DipendenteChatRoute
-  DipendenteCorrezioniRoute: typeof DipendenteCorrezioniRoute
   DipendenteProfiloRoute: typeof DipendenteProfiloRoute
   DipendenteTasksRoute: typeof DipendenteTasksRoute
   DipendenteTimbraRoute: typeof DipendenteTimbraRoute
@@ -567,7 +508,6 @@ interface DipendenteRouteChildren {
 
 const DipendenteRouteChildren: DipendenteRouteChildren = {
   DipendenteChatRoute: DipendenteChatRoute,
-  DipendenteCorrezioniRoute: DipendenteCorrezioniRoute,
   DipendenteProfiloRoute: DipendenteProfiloRoute,
   DipendenteTasksRoute: DipendenteTasksRoute,
   DipendenteTimbraRoute: DipendenteTimbraRoute,
@@ -581,7 +521,6 @@ const DipendenteRouteWithChildren = DipendenteRoute._addFileChildren(
 
 interface ManagerRouteChildren {
   ManagerChatRoute: typeof ManagerChatRoute
-  ManagerCorrezioniRoute: typeof ManagerCorrezioniRoute
   ManagerDashboardRoute: typeof ManagerDashboardRoute
   ManagerProfiloRoute: typeof ManagerProfiloRoute
   ManagerReportRoute: typeof ManagerReportRoute
@@ -596,7 +535,6 @@ interface ManagerRouteChildren {
 
 const ManagerRouteChildren: ManagerRouteChildren = {
   ManagerChatRoute: ManagerChatRoute,
-  ManagerCorrezioniRoute: ManagerCorrezioniRoute,
   ManagerDashboardRoute: ManagerDashboardRoute,
   ManagerProfiloRoute: ManagerProfiloRoute,
   ManagerReportRoute: ManagerReportRoute,
@@ -618,7 +556,6 @@ const rootRouteChildren: RootRouteChildren = {
   DipendenteRoute: DipendenteRouteWithChildren,
   LoginRoute: LoginRoute,
   ManagerRoute: ManagerRouteWithChildren,
-  RegistratiRoute: RegistratiRoute,
   Unisciti4funRoute: Unisciti4funRoute,
   ApiPublicHooksTaskReminderRoute: ApiPublicHooksTaskReminderRoute,
 }
