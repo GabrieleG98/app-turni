@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fmtData, fmtOre, oreTraOrari, isoData } from "@/lib/date-utils";
 import { Sparkles, Coffee, Pause as PauseIcon, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +33,9 @@ function HomeOggi() {
     oreLavorateOggi,
     turnoOggi,
   } = useTimbratura();
+
+  // isLoading approssimato: se profile non c'è ancora l'auth è in volo
+  const isLoading = !profile;
 
   const oreP = turnoOggi ? oreTraOrari(turnoOggi.ora_inizio, turnoOggi.ora_fine, turnoOggi.data) : 0;
   const diff = oreLavorateOggi - oreP;
@@ -74,6 +78,23 @@ function HomeOggi() {
   const saluto = ora.getHours() < 12 ? "Buongiorno" : ora.getHours() < 18 ? "Buon pomeriggio" : "Buonasera";
   const fmtH = (iso: string) =>
     new Date(iso).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+
+  if (isLoading) {
+    return (
+      <>
+        <header className="bg-brand-gradient text-brand-foreground rounded-b-3xl">
+          <div className="max-w-md mx-auto px-5 pt-12 pb-10">
+            <Skeleton className="h-4 w-24 bg-white/20 mb-2" />
+            <Skeleton className="h-8 w-40 bg-white/20" />
+          </div>
+        </header>
+        <main className="max-w-md mx-auto px-4 -mt-6 space-y-4 pb-32">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -198,9 +219,12 @@ function HomeOggi() {
           </Card>
         )}
 
-        <Card className="p-3 text-center text-xs text-muted-foreground border-dashed">
-  Usa il pulsante <span className="font-semibold text-foreground">Timbra</span> per registrare entrate/uscita che trovi nella slide a destra.
-</Card>
+        {/* Hint timbra: mostrato solo se non ha ancora timbrato oggi */}
+        {!haGiaSessioni && !inTurno && (
+          <Card className="p-3 text-center text-xs text-muted-foreground border-dashed">
+            Usa il pulsante <span className="font-semibold text-foreground">Timbra</span> per registrare entrate/uscita che trovi nella slide a destra.
+          </Card>
+        )}
 
         <Button variant="outline" size="sm" className="w-full text-muted-foreground" onClick={() => setCorrOpen(true)}>
           <AlertTriangle className="h-4 w-4 mr-2" /> Segnala errore timbratura
@@ -221,4 +245,3 @@ function HomeOggi() {
     </>
   );
 }
-
