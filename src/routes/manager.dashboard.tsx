@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { addDays, addWeeks, differenceInMinutes, parseISO } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -41,7 +42,7 @@ function Dashboard() {
   const fine = addDays(inizio, 6);
   const oggi = isoData(new Date());
 
-  const { data: profili = [] } = useQuery({
+  const { data: profili = [], isLoading: loadingProfili } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("*").order("cognome");
@@ -49,7 +50,7 @@ function Dashboard() {
     },
   });
 
-  const { data: turni = [] } = useQuery({
+  const { data: turni = [], isLoading: loadingTurni } = useQuery({
     queryKey: ["turni-settimana", isoData(inizio)],
     queryFn: async () => {
       const { data } = await supabase
@@ -121,6 +122,8 @@ function Dashboard() {
     });
   }, [profili, turni, timbrature, turniOggi, timbratureOggi, reparto, oggi]);
 
+  const isLoading = loadingProfili || loadingTurni;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
@@ -168,7 +171,18 @@ function Dashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {righe.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-14 ml-auto rounded-full" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20 ml-auto rounded-full" /></TableCell>
+                </TableRow>
+              ))
+            ) : righe.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nessun dipendente
