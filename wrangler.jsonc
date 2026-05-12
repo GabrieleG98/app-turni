@@ -4,6 +4,7 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  // Supabase env vars for runtime
   "vars": {
     "SUPABASE_URL": "https://cebipocoyzizvujbstpk.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PKfeLLPnOBHOoieifjaxIA_HC3WVlsS"
