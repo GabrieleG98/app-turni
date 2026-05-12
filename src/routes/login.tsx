@@ -35,7 +35,7 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-muted/30">
       <Card className="w-full max-w-md p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold">Turni Staff 4FUN - Timi Ama</h1>
+          <h1 className="text-2xl font-bold">TimiAma | 4FUN</h1>
           <p className="text-sm text-muted-foreground mt-1">Accedi al tuo account</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
