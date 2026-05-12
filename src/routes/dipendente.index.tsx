@@ -199,8 +199,8 @@ function HomeOggi() {
         )}
 
         <Card className="p-3 text-center text-xs text-muted-foreground border-dashed">
-          Usa il pulsante <span className="font-semibold text-foreground">Timbra</span> in basso per registrare entrata/uscita. Puoi timbrare più volte nella stessa giornata.
-        </Card>
+  Usa il pulsante <span className="font-semibold text-foreground">Timbra</span> per registrare entrate/uscita che trovi nella slide a destra.
+</Card>
 
         <Button variant="outline" size="sm" className="w-full text-muted-foreground" onClick={() => setCorrOpen(true)}>
           <AlertTriangle className="h-4 w-4 mr-2" /> Segnala errore timbratura
