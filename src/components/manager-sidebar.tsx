@@ -12,29 +12,51 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel, ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange, UserCog, Clock } from "lucide-react";
+import {
+  LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel,
+  ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange,
+  UserCog, Clock,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
-const baseItems = [
-  { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard },
-  { title: "Turni", url: "/manager/turni", icon: CalendarDays },
-  { title: "Calendario", url: "/calendario", icon: CalendarRange },
-  { title: "Timbra", url: "/manager/timbra", icon: Clock },
-  { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
-  { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
-  { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
-  { title: "Chat", url: "/manager/chat", icon: MessageCircle },
-  { title: "Report", url: "/manager/report", icon: FileText },
-  { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
+const gruppi = [
+  {
+    label: "📋 Gestione",
+    items: [
+      { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard },
+      { title: "Turni", url: "/manager/turni", icon: CalendarDays },
+      { title: "Calendario", url: "/calendario", icon: CalendarRange },
+    ],
+  },
+  {
+    label: "👥 Persone",
+    items: [
+      { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
+      { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
+      { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog },
+    ],
+  },
+  {
+    label: "⚙️ Operativo",
+    items: [
+      { title: "Tasks", url: "/manager/tasks", icon: ListChecks },
+      { title: "Report", url: "/manager/report", icon: FileText },
+      { title: "Timbra", url: "/manager/timbra", icon: Clock },
+    ],
+  },
+  {
+    label: "💬 Altro",
+    items: [
+      { title: "Chat", url: "/manager/chat", icon: MessageCircle },
+      { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
+    ],
+  },
 ];
-
-const managerExtra = { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog };
 
 export function ManagerSidebar() {
   const { signOut, profile } = useAuth();
-  const items = [...baseItems, managerExtra];
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { setOpenMobile, setOpen } = useSidebar();
   const isMobile = useIsMobile();
@@ -51,25 +73,31 @@ export function ManagerSidebar() {
           <span className="truncate">Turni Staff 4FUN - Timi Ama</span>
         </div>
       </SidebarHeader>
+
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Area Manager</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={path.startsWith(item.url)}>
-                    <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {gruppi.map((gruppo) => (
+          <SidebarGroup key={gruppo.label}>
+            <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground/70 px-2 mb-0.5">
+              {gruppo.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {gruppo.items.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={path.startsWith(item.url)}>
+                      <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
+
       <SidebarFooter className="p-3">
         {profile && (
           <div className="text-xs text-muted-foreground mb-2 truncate">
