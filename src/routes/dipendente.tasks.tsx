@@ -18,11 +18,17 @@ function Tasks() {
   const oggi = isoData(new Date());
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [rpcDone, setRpcDone] = useState(false);
-  const rpcCalled = useRef(false);
+  // FIX #5: traccia l'ultimo giorno per cui la RPC è stata chiamata.
+  // Se il componente resta montato a mezzanotte e oggi cambia,
+  // la RPC viene rieseguita per il nuovo giorno.
+  const rpcCalledForDay = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user || rpcCalled.current) return;
-    rpcCalled.current = true;
+    if (!user) return;
+    // Se la RPC è già stata chiamata per questo stesso giorno, skip
+    if (rpcCalledForDay.current === oggi) return;
+    rpcCalledForDay.current = oggi;
+    setRpcDone(false);
     supabase.rpc("ensure_my_tasks", { _data: oggi }).then(() => {
       qc.invalidateQueries({ queryKey: ["miei-task", oggi] });
       setRpcDone(true);

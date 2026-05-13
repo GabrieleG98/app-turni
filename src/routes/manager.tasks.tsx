@@ -29,7 +29,6 @@ const GIORNI = [
   { v: 4, l: "Gio" }, { v: 5, l: "Ven" }, { v: 6, l: "Sab" }, { v: 7, l: "Dom" },
 ];
 
-// Invia notifica a uno o più dipendenti
 async function inviaNotifica(
   userIds: string[],
   titolo: string,
@@ -106,9 +105,14 @@ function ManagerTasks() {
     setReparto(""); setRichiedeFoto(false);
   };
 
-  // Restituisce lista user_id dei destinatari del template
+  // FIX #4: la funzione destinatari esclude SEMPRE il manager corrente,
+  // indipendentemente dal fatto che assegnatoA sia "__all__" o un ID specifico.
+  // Prima escludeva il manager solo nel caso "__all__".
   const destinatari = (tAssegnatoA: string | null, tReparto: string | null): string[] => {
-    if (tAssegnatoA) return [tAssegnatoA];
+    if (tAssegnatoA) {
+      // singolo destinatario: ok solo se non è il manager stesso
+      return tAssegnatoA !== user?.id ? [tAssegnatoA] : [];
+    }
     let dips: any[] = dipendenti;
     if (tReparto) dips = dips.filter((d: any) => d.reparto === tReparto);
     return dips.map((d: any) => d.id).filter((id: string) => id !== user?.id);
@@ -132,7 +136,6 @@ function ManagerTasks() {
       .single();
     if (error) return toast.error("Errore", { description: error.message });
 
-    // Notifica ai dipendenti coinvolti
     const ids = destinatari(
       assegnatoA !== "__all__" ? assegnatoA : null,
       assegnatoA === "__all__" && reparto.trim() ? reparto.trim() : null
@@ -157,12 +160,10 @@ function ManagerTasks() {
 
   const elimina = async (id: string) => {
     if (!confirm("Eliminare questo template? Verranno rimossi anche i task generati.")) return;
-    // Recupera il template per ottenere titolo e destinatari
     const template = templates.find((t: any) => t.id === id) as any;
     const { error } = await supabase.from("task_template").delete().eq("id", id);
     if (error) return toast.error("Errore", { description: error.message });
 
-    // Notifica ai dipendenti coinvolti
     if (template) {
       const ids = destinatari(template.assegnato_a, template.reparto);
       await inviaNotifica(

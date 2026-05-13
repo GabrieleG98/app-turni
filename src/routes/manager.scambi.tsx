@@ -56,92 +56,81 @@ function ScambiPage() {
   const turnoMap = new Map(turni.map((t) => [t.id, t]));
 
   const decidi = async (id: string, decisione: "approved" | "rejected", swap: SwapRow) => {
-  const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  const { error } = await supabase
-    .from("turno_swap_requests")
-    .update({
-      status: decisione,
-      decisione_di: user?.id,
-      decisione_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+    const daProfile = profMap.get(swap.da_dipendente);
+    const aProfile = profMap.get(swap.a_dipendente);
+    const turno = turnoMap.get(swap.turno_id);
 
-  if (error) {
-    toast.error("Errore", { description: error.message });
-    return;
-  }
+    const turnoLabel = turno
+      ? `${fmtData(new Date(turno.data))} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
+      : "turno assegnato";
 
-  // Trova i profili dei due dipendenti coinvolti, solo per testo notifica
-  const daProfile = profMap.get(swap.da_dipendente);
-  const aProfile = profMap.get(swap.a_dipendente);
-  const turno = turnoMap.get(swap.turno_id);
+    if (decisione === "approved") {
+      // FIX #3: operazione atomica tramite RPC per evitare stato inconsistente
+      // (se l'update del turno falliva, lo swap risultava già "approved" nel DB)
+      const { error } = await supabase.rpc("approve_swap", {
+        _swap_id: id,
+        _manager_id: user?.id ?? null,
+        _nuovo_dipendente: swap.a_dipendente,
+        _turno_id: swap.turno_id,
+      });
 
-  // Prepara descrizione comune
-  const turnoLabel = turno
-    ? `${fmtData(new Date(turno.data))} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
-    : "turno assegnato";
+      if (error) {
+        toast.error("Errore approvazione scambio", { description: error.message });
+        return;
+      }
 
-  if (decisione === "approved") {
-    // 1) Riassegno il turno al nuovo dipendente
-    const { error: e2 } = await supabase
-      .from("turni")
-      .update({ dipendente_id: swap.a_dipendente })
-      .eq("id", swap.turno_id);
+      toast.success("Scambio approvato e turno riassegnato");
 
-    if (e2) {
-      toast.error("Errore riassegnazione turno", { description: e2.message });
-      return;
+      const notificheDaInserire = [
+        {
+          user_id: swap.da_dipendente,
+          titolo: "Scambio turno approvato",
+          descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata approvata.`,
+          link: "/dipendente/turni",
+        },
+        {
+          user_id: swap.a_dipendente,
+          titolo: "Ti è stato assegnato un turno tramite scambio",
+          descrizione: `Hai ricevuto un turno tramite scambio da ${daProfile ? `${daProfile.nome} ${daProfile.cognome}` : "un collega"} per il ${turnoLabel}.`,
+          link: "/dipendente/turni",
+        },
+      ];
+
+      const { error: notifError } = await supabase.from("notifiche").insert(notificheDaInserire);
+      if (notifError) console.error("Errore inserimento notifiche scambio approvato:", notifError);
+
+    } else {
+      // Rifiuto: solo aggiornamento status, nessuna modifica al turno
+      const { error } = await supabase
+        .from("turno_swap_requests")
+        .update({
+          status: decisione,
+          decisione_di: user?.id,
+          decisione_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) {
+        toast.error("Errore", { description: error.message });
+        return;
+      }
+
+      toast.success("Richiesta rifiutata");
+
+      const { error: notifError } = await supabase.from("notifiche").insert({
+        user_id: swap.da_dipendente,
+        titolo: "Scambio turno rifiutato",
+        descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata rifiutata dal manager.`,
+        link: "/dipendente/turni",
+      });
+      if (notifError) console.error("Errore inserimento notifiche scambio rifiutato:", notifError);
     }
 
-    toast.success("Scambio approvato e turno riassegnato");
-
-    // 2) Notifiche per approvazione
-    const notificheDaInserire = [];
-
-    // Notifica al richiedente
-    notificheDaInserire.push({
-      user_id: swap.da_dipendente,
-      titolo: "Scambio turno approvato",
-      descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata approvata.`,
-      link: "/dipendente/turni",
-    });
-
-    // Notifica al collega che riceve il turno (opzionale ma utile)
-    notificheDaInserire.push({
-      user_id: swap.a_dipendente,
-      titolo: "Ti è stato assegnato un turno tramite scambio",
-      descrizione: `Hai ricevuto un turno tramite scambio da ${daProfile ? `${daProfile.nome} ${daProfile.cognome}` : "un collega"} per il ${turnoLabel}.`,
-      link: "/dipendente/turni",
-    });
-
-    const { error: notifError } = await supabase
-      .from("notifiche")
-      .insert(notificheDaInserire);
-
-    if (notifError) {
-      console.error("Errore inserimento notifiche scambio approvato:", notifError);
-    }
-
-  } else {
-    toast.success("Richiesta rifiutata");
-
-    // Notifica di rifiuto solo al richiedente
-    const { error: notifError } = await supabase.from("notifiche").insert({
-      user_id: swap.da_dipendente,
-      titolo: "Scambio turno rifiutato",
-      descrizione: `La tua richiesta di scambio per il ${turnoLabel} è stata rifiutata dal manager.`,
-      link: "/dipendente/turni",
-    });
-
-    if (notifError) {
-      console.error("Errore inserimento notifiche scambio rifiutato:", notifError);
-    }
-  }
-
-  qc.invalidateQueries({ queryKey: ["swap-requests"] });
-  qc.invalidateQueries({ queryKey: ["turni-settimana"] });
-};
+    qc.invalidateQueries({ queryKey: ["swap-requests"] });
+    qc.invalidateQueries({ queryKey: ["turni-settimana"] });
+  };
 
   const pending = swaps.filter((s) => s.status === "pending");
   const storico = swaps.filter((s) => s.status !== "pending");
@@ -180,12 +169,12 @@ function ScambiPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-<div>
-  <h1 className="text-2xl font-bold">Scambi turno</h1>
-  <p className="text-sm text-muted-foreground">
-    Richieste di scambio turno in attesa di approvazione
-  </p>
-</div>
+      <div>
+        <h1 className="text-2xl font-bold">Scambi turno</h1>
+        <p className="text-sm text-muted-foreground">
+          Richieste di scambio turno in attesa di approvazione
+        </p>
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
