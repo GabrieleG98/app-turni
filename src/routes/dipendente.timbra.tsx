@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { Play, Square, Clock, RotateCw, Loader2 } from "lucide-react";
+import { Play, Square, Clock, RotateCw, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimbratura } from "@/hooks/use-timbratura";
 import { fmtRitardo } from "@/lib/timbra-window";
@@ -29,15 +29,27 @@ function TimbraPage() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [elaborando, setElaborando] = useState(false);
+  // FIX #9: feedback visivo se l'utente annulla la scelta foto (file rimane null)
+  const [fotoMancante, setFotoMancante] = useState(false);
 
   const handleClick = () => {
     if (!canClock) return;
+    setFotoMancante(false);
     fileRef.current?.click();
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     e.target.value = "";
+
+    // FIX #9: se l'utente non seleziona nessun file (es. nega fotocamera su desktop),
+    // mostra un avviso visibile invece di procedere silenziosamente con foto=null.
+    if (!f) {
+      setFotoMancante(true);
+      return;
+    }
+
+    setFotoMancante(false);
     setElaborando(true);
     try {
       if (inTurno) await clockOut(f);
@@ -127,6 +139,14 @@ function TimbraPage() {
           <p className="text-sm text-muted-foreground text-center animate-pulse">
             Upload foto in corso…
           </p>
+        )}
+
+        {/* FIX #9: avviso visivo se la foto non è stata allegata */}
+        {fotoMancante && (
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2 w-full">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Nessuna foto selezionata. Premi di nuovo il pulsante e scatta o carica una foto per timbrare.</span>
+          </div>
         )}
 
         <Button

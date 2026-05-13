@@ -80,7 +80,8 @@ function Dashboard() {
       const { data } = await supabase
         .from("timbrature")
         .select("*")
-        .eq("data", oggi);
+        .eq("data", oggi)
+        .order("orario_clock_in", { ascending: true });
       return data ?? [];
     },
   });
@@ -110,6 +111,10 @@ function Dashboard() {
       const tbDip = timbrature.filter((t) => t.dipendente_id === p.id);
       const oreE = tbDip.reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
       const turnoOggiDip = turniOggi.find((t) => t.dipendente_id === p.id);
+      // FIX #7: usa la PRIMA timbratura ordinata per orario_clock_in (non una casuale).
+      // Prima .find() prendeva la prima riga restituita dal DB senza ordinamento garantito.
+      // Ora timbratureOggi è ordinato ASC per orario_clock_in (vedi query sopra),
+      // quindi la prima sessione del giorno è sempre quella più antica = la vera entrata.
       const timbOggiDip = timbratureOggi.find((t) => t.dipendente_id === p.id);
       let ritardoMin: number | null = null;
       if (turnoOggiDip && timbOggiDip) {
