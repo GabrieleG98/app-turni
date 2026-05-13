@@ -77,7 +77,6 @@ export function useTimbratura() {
 
   const win = computeWindow(turnoOggi, now, isManagerFree);
   // canClock: in turno → sempre (per chiudere); altrimenti dipende dalla finestra.
-  // In freeMode (manager) o senza turno + freeMode già gestito da computeWindow.
   const canClock: boolean = inTurno
     ? true
     : win.state === "available" || win.state === "late";
@@ -85,53 +84,60 @@ export function useTimbratura() {
   const minutiRitardo = win.minutiRitardo;
 
   const clockIn = useCallback(async (file: File | null) => {
-  if (!user) return;
+    if (!user) return;
 
-  if (sessioneAttiva) {
-    toast.error("Hai una sessione già aperta");
-    return;
-  }
+    if (sessioneAttiva) {
+      toast.error("Hai una sessione già aperta");
+      return;
+    }
 
-  // ✅ blocco se non c'è turno pubblicato per oggi
-  if (!isManagerFree && !turnoOggi) {
-    toast.error("Nessun turno schedulato", {
-      description: "Non puoi timbrare senza un turno pubblicato per oggi.",
-    });
-    return;
-  }
+    // blocco se non c'è turno pubblicato per oggi
+    if (!isManagerFree && !turnoOggi) {
+      toast.error("Nessun turno schedulato", {
+        description: "Non puoi timbrare senza un turno pubblicato per oggi.",
+      });
+      return;
+    }
 
-  setBusy(true);
-  try {
-    const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
-    const orario = new Date();
-    const { error } = await supabase.from("timbrature").insert({
-      dipendente_id: user.id,
-      data: oggi,
-      orario_clock_in: orario.toISOString(),
-      foto_in_url,
-    });
-    if (error) throw error;
-    setConferma({
-      tipo: "in",
-      orario,
-      fotoUrl: foto_in_url,
-      ritardoMin: minutiRitardo,
-    });
-    toast.success(minutiRitardo > 0 ? `Entrata con ${minutiRitardo} min di ritardo` : "Entrata timbrata");
-    qc.invalidateQueries({ queryKey: ["timb-oggi"] });
-  } catch (e: any) {
-    toast.error("Errore", { description: e.message });
-  } finally {
-    setBusy(false);
-  }
-}, [user, sessioneAttiva, turnoOggi, isManagerFree, oggi, minutiRitardo, qc]);
+    setBusy(true);
+    try {
+      const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
+      const orario = new Date();
+      const { error } = await supabase.from("timbrature").insert({
+        dipendente_id: user.id,
+        data: oggi,
+        orario_clock_in: orario.toISOString(),
+        foto_in_url,
+      });
+      if (error) throw error;
+      setConferma({
+        tipo: "in",
+        orario,
+        fotoUrl: foto_in_url,
+        ritardoMin: minutiRitardo,
+      });
+      // FIX #2: il toast mostra il ritardo SOLO se windowState è "late"
+      // (minutiRitardo > 0 non è sufficiente: può essere > 0 anche in freeMode
+      // o in edge-case di calcolo senza che l'utente sia effettivamente in ritardo).
+      toast.success(
+        windowState === "late" && minutiRitardo > 0
+          ? `Entrata con ${minutiRitardo} min di ritardo`
+          : "Entrata timbrata"
+      );
+      qc.invalidateQueries({ queryKey: ["timb-oggi"] });
+    } catch (e: any) {
+      toast.error("Errore", { description: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }, [user, sessioneAttiva, turnoOggi, isManagerFree, oggi, minutiRitardo, windowState, qc]);
 
   const clockOut = useCallback(async (file: File | null) => {
     if (!sessioneAttiva) {
       toast.error("Nessuna sessione aperta");
       return;
     }
-    
+
     if (pausaAperta) {
       toast.error("Chiudi prima la pausa in corso");
       return;
@@ -139,15 +145,15 @@ export function useTimbratura() {
     setBusy(true);
     try {
       const foto_out_url = (file && user) ? await uploadSelfie(user.id, file, "out") : null;
-const orario = new Date();
-const { error } = await supabase
-  .from("timbrature")
-  .update({
-    orario_clock_out: orario.toISOString(),
-    foto_out_url,
-  })
-  .eq("id", sessioneAttiva.id);
-      
+      const orario = new Date();
+      const { error } = await supabase
+        .from("timbrature")
+        .update({
+          orario_clock_out: orario.toISOString(),
+          foto_out_url,
+        })
+        .eq("id", sessioneAttiva.id);
+
       if (error) throw error;
       const ore = oreTimbratura(sessioneAttiva.orario_clock_in, orario.toISOString());
       setConferma({
