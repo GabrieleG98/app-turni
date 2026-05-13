@@ -10,19 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2, ListChecks, Camera, CheckCircle2 } from "lucide-react";
 import { isoData, fmtData } from "@/lib/date-utils";
@@ -33,14 +25,27 @@ export const Route = createFileRoute("/manager/tasks")({
 });
 
 const GIORNI = [
-  { v: 1, l: "Lun" },
-  { v: 2, l: "Mar" },
-  { v: 3, l: "Mer" },
-  { v: 4, l: "Gio" },
-  { v: 5, l: "Ven" },
-  { v: 6, l: "Sab" },
-  { v: 7, l: "Dom" },
+  { v: 1, l: "Lun" }, { v: 2, l: "Mar" }, { v: 3, l: "Mer" },
+  { v: 4, l: "Gio" }, { v: 5, l: "Ven" }, { v: 6, l: "Sab" }, { v: 7, l: "Dom" },
 ];
+
+// Invia notifica a uno o più dipendenti
+async function inviaNotifica(
+  userIds: string[],
+  titolo: string,
+  descrizione: string,
+  link?: string
+) {
+  if (!userIds.length) return;
+  await supabase.from("notifiche").insert(
+    userIds.map((uid) => ({
+      user_id: uid,
+      titolo,
+      descrizione,
+      link: link ?? null,
+    }))
+  );
+}
 
 function ManagerTasks() {
   const qc = useQueryClient();
@@ -96,28 +101,49 @@ function ManagerTasks() {
   };
 
   const reset = () => {
-    setTitolo("");
-    setDescrizione("");
-    setRicorrenza("daily");
-    setGiorni([1, 2, 3, 4, 5, 6, 7]);
-    setAssegnatoA("__all__");
-    setReparto("");
-    setRichiedeFoto(false);
+    setTitolo(""); setDescrizione(""); setRicorrenza("daily");
+    setGiorni([1, 2, 3, 4, 5, 6, 7]); setAssegnatoA("__all__");
+    setReparto(""); setRichiedeFoto(false);
+  };
+
+  // Restituisce lista user_id dei destinatari del template
+  const destinatari = (tAssegnatoA: string | null, tReparto: string | null): string[] => {
+    if (tAssegnatoA) return [tAssegnatoA];
+    let dips: any[] = dipendenti;
+    if (tReparto) dips = dips.filter((d: any) => d.reparto === tReparto);
+    return dips.map((d: any) => d.id).filter((id: string) => id !== user?.id);
   };
 
   const crea = async () => {
     if (!titolo.trim()) return toast.error("Inserisci un titolo");
-    const { error } = await supabase.from("task_template").insert({
-      titolo: titolo.trim(),
-      descrizione: descrizione.trim() || null,
-      ricorrenza,
-      giorni_settimana: giorni.length ? giorni : [1, 2, 3, 4, 5, 6, 7],
-      assegnato_a: assegnatoA !== "__all__" ? assegnatoA : null,
-      reparto: assegnatoA === "__all__" && reparto.trim() ? reparto.trim() : null,
-      richiede_foto: richiedeFoto,
-      created_by: user!.id,
-    });
+    const { data: newTemplate, error } = await supabase
+      .from("task_template")
+      .insert({
+        titolo: titolo.trim(),
+        descrizione: descrizione.trim() || null,
+        ricorrenza,
+        giorni_settimana: giorni.length ? giorni : [1, 2, 3, 4, 5, 6, 7],
+        assegnato_a: assegnatoA !== "__all__" ? assegnatoA : null,
+        reparto: assegnatoA === "__all__" && reparto.trim() ? reparto.trim() : null,
+        richiede_foto: richiedeFoto,
+        created_by: user!.id,
+      })
+      .select()
+      .single();
     if (error) return toast.error("Errore", { description: error.message });
+
+    // Notifica ai dipendenti coinvolti
+    const ids = destinatari(
+      assegnatoA !== "__all__" ? assegnatoA : null,
+      assegnatoA === "__all__" && reparto.trim() ? reparto.trim() : null
+    );
+    await inviaNotifica(
+      ids,
+      "📋 Nuova task assegnata",
+      `È stata aggiunta una nuova task: "${titolo.trim()}"`,
+      "/dipendente/tasks"
+    );
+
     toast.success("Template creato");
     setOpen(false);
     reset();
@@ -131,8 +157,22 @@ function ManagerTasks() {
 
   const elimina = async (id: string) => {
     if (!confirm("Eliminare questo template? Verranno rimossi anche i task generati.")) return;
+    // Recupera il template per ottenere titolo e destinatari
+    const template = templates.find((t: any) => t.id === id) as any;
     const { error } = await supabase.from("task_template").delete().eq("id", id);
     if (error) return toast.error("Errore", { description: error.message });
+
+    // Notifica ai dipendenti coinvolti
+    if (template) {
+      const ids = destinatari(template.assegnato_a, template.reparto);
+      await inviaNotifica(
+        ids,
+        "🗑️ Task rimossa",
+        `La task "${template.titolo}" è stata eliminata dal manager.`,
+        "/dipendente/tasks"
+      );
+    }
+
     toast.success("Template eliminato");
     qc.invalidateQueries({ queryKey: ["task-templates"] });
   };
@@ -140,7 +180,7 @@ function ManagerTasks() {
   const nomeDip = (id: string | null) => {
     if (!id) return "Tutti";
     const d = dipendenti.find((x: any) => x.id === id);
-    return d ? `${d.nome} ${d.cognome}` : "—";
+    return d ? `${(d as any).nome} ${(d as any).cognome}` : "—";
   };
 
   return (
@@ -187,18 +227,10 @@ function ManagerTasks() {
                   {GIORNI.map((g) => {
                     const on = giorni.includes(g.v);
                     return (
-                      <button
-                        key={g.v}
-                        type="button"
-                        onClick={() =>
-                          setGiorni((prev) => (on ? prev.filter((x) => x !== g.v) : [...prev, g.v].sort()))
-                        }
-                        className={`px-2.5 py-1 text-xs rounded-md border ${
-                          on ? "bg-primary text-primary-foreground border-primary" : "bg-background"
-                        }`}
-                      >
-                        {g.l}
-                      </button>
+                      <button key={g.v} type="button"
+                        onClick={() => setGiorni((prev) => (on ? prev.filter((x) => x !== g.v) : [...prev, g.v].sort()))}
+                        className={`px-2.5 py-1 text-xs rounded-md border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+                      >{g.l}</button>
                     );
                   })}
                 </div>
@@ -224,9 +256,7 @@ function ManagerTasks() {
               <div className="flex items-center justify-between rounded-md border p-3">
                 <div>
                   <Label className="cursor-pointer">Richiede foto a fine task</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Il dipendente dovrà allegare una foto per chiudere il task.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Il dipendente dovrà allegare una foto per chiudere il task.</p>
                 </div>
                 <Switch checked={richiedeFoto} onCheckedChange={setRichiedeFoto} />
               </div>
@@ -256,15 +286,13 @@ function ManagerTasks() {
               const done = !!t.completato_at;
               return (
                 <li key={t.id} className="py-2 flex items-center gap-3 text-sm">
-                  {done ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                  ) : (
-                    <div className="h-4 w-4 rounded-full border border-muted-foreground/40 shrink-0" />
-                  )}
+                  {done
+                    ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    : <div className="h-4 w-4 rounded-full border border-muted-foreground/40 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className={done ? "line-through text-muted-foreground" : ""}>{t.titolo}</div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {dip ? `${dip.nome} ${dip.cognome}` : "—"}
+                      {dip ? `${(dip as any).nome} ${(dip as any).cognome}` : "—"}
                       {done && ` · ${new Date(t.completato_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
                     </div>
                   </div>
@@ -283,11 +311,9 @@ function ManagerTasks() {
       <Dialog open={!!fotoOpen} onOpenChange={(o) => { if (!o) { setFotoOpen(null); setFotoSignedUrl(null); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Foto del task</DialogTitle></DialogHeader>
-          {fotoSignedUrl ? (
-            <img src={fotoSignedUrl} alt="Foto task" className="w-full rounded-lg" />
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Caricamento…</p>
-          )}
+          {fotoSignedUrl
+            ? <img src={fotoSignedUrl} alt="Foto task" className="w-full rounded-lg" />
+            : <p className="text-sm text-muted-foreground text-center py-8">Caricamento…</p>}
         </DialogContent>
       </Dialog>
 
@@ -303,13 +329,9 @@ function ManagerTasks() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{t.titolo}</span>
-                  <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted">
-                    {t.ricorrenza}
-                  </span>
+                  <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted">{t.ricorrenza}</span>
                 </div>
-                {t.descrizione && (
-                  <p className="text-sm text-muted-foreground mt-1">{t.descrizione}</p>
-                )}
+                {t.descrizione && <p className="text-sm text-muted-foreground mt-1">{t.descrizione}</p>}
                 <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
                   <span>👤 {nomeDip(t.assegnato_a)}</span>
                   {t.reparto && <span>· 🏷️ {t.reparto}</span>}

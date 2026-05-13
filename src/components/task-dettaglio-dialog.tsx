@@ -3,12 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, CheckCircle2, RotateCcw, Loader2, X } from "lucide-react";
@@ -34,7 +30,7 @@ interface Props {
 
 export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey }: Props) {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [foto, setFoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,10 +52,7 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
   if (!task) return null;
   const done = !!task.completato_at;
 
-  const reset = () => {
-    setFoto(null);
-    setPreview(null);
-  };
+  const reset = () => { setFoto(null); setPreview(null); };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -67,6 +60,27 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
     if (!f) return;
     setFoto(f);
     setPreview(URL.createObjectURL(f));
+  };
+
+  // Notifica al manager quando il dipendente completa un task
+  const notificaManagerCompletamento = async (taskTitolo: string) => {
+    try {
+      // Recupera tutti i manager
+      const { data: managers } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("ruolo", "manager");
+      if (!managers?.length) return;
+      const nomeDip = profile ? `${(profile as any).nome} ${(profile as any).cognome}` : "Un dipendente";
+      await supabase.from("notifiche").insert(
+        managers.map((m: any) => ({
+          user_id: m.id,
+          titolo: "✅ Task completata",
+          descrizione: `${nomeDip} ha completato: "${taskTitolo}"`,
+          link: "/manager/tasks",
+        }))
+      );
+    } catch (_) {}
   };
 
   const completa = async () => {
@@ -91,6 +105,9 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
         .update({ completato_at: new Date().toISOString(), foto_url })
         .eq("id", task.id);
       if (error) throw error;
+
+      await notificaManagerCompletamento(task.titolo);
+
       toast.success("Task completato!");
       qc.invalidateQueries({ queryKey: invalidateKey });
       reset();
@@ -131,7 +148,6 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
           {task.descrizione && (
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.descrizione}</p>
           )}
-
           {done ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-green-600">
@@ -145,19 +161,13 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
           ) : (
             <div className="space-y-2">
               <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleFile}
+                ref={fileRef} type="file" accept="image/*"
+                capture="environment" className="hidden" onChange={handleFile}
               />
               {preview ? (
                 <div className="relative">
                   <img src={preview} alt="Anteprima" className="w-full rounded-lg border" />
-                  <button
-                    type="button"
-                    onClick={reset}
+                  <button type="button" onClick={reset}
                     className="absolute top-2 right-2 bg-background/90 rounded-full p-1 shadow"
                     aria-label="Rimuovi"
                   >
@@ -165,20 +175,13 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
                   </button>
                 </div>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => fileRef.current?.click()}
-                >
+                <Button type="button" variant="outline" className="w-full" onClick={() => fileRef.current?.click()}>
                   <Camera className="h-4 w-4 mr-2" />
                   {richiedeFoto ? "Scatta foto (obbligatoria)" : "Aggiungi foto (opzionale)"}
                 </Button>
               )}
               {richiedeFoto && !foto && (
-                <p className="text-xs text-amber-600">
-                  Per chiudere questo task è richiesta una foto.
-                </p>
+                <p className="text-xs text-amber-600">Per chiudere questo task è richiesta una foto.</p>
               )}
             </div>
           )}

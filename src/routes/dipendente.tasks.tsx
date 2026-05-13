@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -17,16 +17,20 @@ function Tasks() {
   const { user } = useAuth();
   const oggi = isoData(new Date());
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [rpcDone, setRpcDone] = useState(false);
+  const rpcCalled = useRef(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || rpcCalled.current) return;
+    rpcCalled.current = true;
     supabase.rpc("ensure_my_tasks", { _data: oggi }).then(() => {
       qc.invalidateQueries({ queryKey: ["miei-task", oggi] });
+      setRpcDone(true);
     });
   }, [user, oggi, qc]);
 
   const { data: tasks = [], isLoading } = useQuery({
-    enabled: !!user,
+    enabled: !!user && rpcDone,
     queryKey: ["miei-task", oggi],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,6 +48,8 @@ function Tasks() {
   const tutto = tot > 0 && fatti === tot;
   const openTask = tasks.find((t: any) => t.id === openTaskId) ?? null;
   const richiedeFoto = (openTask?.template as any)?.richiede_foto ?? false;
+
+  const showLoading = !rpcDone || isLoading;
 
   return (
     <>
@@ -63,14 +69,14 @@ function Tasks() {
           </div>
         )}
 
-        {isLoading ? (
+        {showLoading ? (
           <Card className="p-6 text-center text-sm text-muted-foreground border-0">Caricamento…</Card>
         ) : tot === 0 ? (
           <Card className="p-8 text-center border-0 shadow-sm">
             <ListChecks className="h-10 w-10 text-brand mx-auto mb-3" />
-            <div className="font-semibold">Nessuna attività oggi</div>
+            <div className="font-semibold">Nessuna task per oggi</div>
             <p className="text-sm text-muted-foreground mt-1">
-              Goditi il turno! Le checklist verranno create quando il manager le configura.
+              Non hai task assegnate per oggi. Goditi il turno!
             </p>
           </Card>
         ) : (
