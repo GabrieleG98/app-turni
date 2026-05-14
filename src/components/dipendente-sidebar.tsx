@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Home, CalendarDays, CalendarRange,
-  ListChecks, MessageCircle, User, Hotel, LogOut, Clock,
+  ListChecks, User, Hotel, LogOut, Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -29,9 +29,8 @@ const gruppi = [
     ],
   },
   {
-    label: "💬 Altro",
+    label: "👤 Altro",
     items: [
-      { title: "Chat", url: "/dipendente/chat", icon: MessageCircle },
       { title: "Profilo", url: "/dipendente/profilo", icon: User },
     ],
   },

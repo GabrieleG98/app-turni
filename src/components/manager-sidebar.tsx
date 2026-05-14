@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel,
-  ArrowRightLeft, MessageCircle, ListChecks, UserCircle, CalendarRange,
+  ArrowRightLeft, ListChecks, UserCircle, CalendarRange,
   UserCog, Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -35,7 +35,7 @@ const gruppi = [
     items: [
       { title: "Dipendenti", url: "/manager/dipendenti", icon: Users },
       { title: "Scambi", url: "/manager/scambi", icon: ArrowRightLeft },
-      { title: "Timbra per…", url: "/manager/timbra-per", icon: UserCog },
+      { title: "Timbra per...", url: "/manager/timbra-per", icon: UserCog },
     ],
   },
   {
@@ -47,9 +47,8 @@ const gruppi = [
     ],
   },
   {
-    label: "💬 Altro",
+    label: "👤 Altro",
     items: [
-      { title: "Chat", url: "/manager/chat", icon: MessageCircle },
       { title: "Profilo", url: "/manager/profilo", icon: UserCircle },
     ],
   },
@@ -82,16 +81,19 @@ export function ManagerSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {gruppo.items.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={path.startsWith(item.url)}>
-                      <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {gruppo.items.map((item) => {
+                  const active = path.startsWith(item.url);
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild isActive={active}>
+                        <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
