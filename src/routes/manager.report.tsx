@@ -12,13 +12,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableFoot, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   fmtOre, fmtSettimana, inizioSettimana, isoData, oreTimbratura, oreTraOrari,
 } from "@/lib/date-utils";
-import { addDays, addWeeks, format, startOfMonth, endOfMonth } from "date-fns";
-import { ChevronLeft, ChevronRight, FileSpreadsheet, CalendarRange } from "lucide-react";
+import { addDays, addWeeks, format } from "date-fns";
+import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/report")({
@@ -29,10 +29,6 @@ function Report() {
   const [inizio, setInizio] = useState(inizioSettimana());
   const [reparto, setReparto] = useState<string>("tutti");
   const fine = addDays(inizio, 6);
-
-  const goToThisMonth = () => {
-    setInizio(startOfMonth(new Date()));
-  };
 
   const { data: profili = [], isLoading: loadingProfili } = useQuery({
     queryKey: ["profiles"],
@@ -82,17 +78,12 @@ function Report() {
     [tutteLighe, reparto],
   );
 
-  // Totali
   const totOreP = righe.reduce((s, r) => s + r.oreP, 0);
   const totOreE = righe.reduce((s, r) => s + r.oreE, 0);
   const totStraord = righe.reduce((s, r) => s + r.straord, 0);
   const totDiff = righe.reduce((s, r) => s + r.diff, 0);
 
-  // Range label
-  const isMese = fine.getTime() - inizio.getTime() > 7 * 24 * 60 * 60 * 1000 - 1000;
-  const rangeLabel = isMese
-    ? format(inizio, "MMMM yyyy")
-    : fmtSettimana(inizio);
+  const rangeLabel = fmtSettimana(inizio);
 
   const esportaExcel = () => {
     const titolo = `Report ore · ${format(inizio, "dd/MM/yyyy")} – ${format(fine, "dd/MM/yyyy")}`;
@@ -163,9 +154,6 @@ function Report() {
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setInizio(inizioSettimana())}>
           Settimana
-        </Button>
-        <Button variant="ghost" size="sm" onClick={goToThisMonth} className="gap-1.5">
-          <CalendarRange className="h-3.5 w-3.5" /> Mese
         </Button>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Reparto:</span>

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Home, CalendarDays, CalendarRange,
-  ListChecks, User, Hotel, LogOut, Clock,
+  ListChecks, User, Hotel, LogOut, Clock, BarChart2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -26,6 +26,7 @@ const gruppi = [
     items: [
       { title: "Tasks", url: "/dipendente/tasks", icon: ListChecks },
       { title: "Timbra", url: "/dipendente/timbra", icon: Clock },
+      { title: "Report ore", url: "/dipendente/report", icon: BarChart2 },
     ],
   },
   {
