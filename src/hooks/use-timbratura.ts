@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { isoData, oreTimbratura, sommaOreSessioni } from "@/lib/date-utils";
-import { uploadSelfie } from "@/lib/timbrature-utils";
+import { uploadSelfie, getSelfieSignedUrl } from "@/lib/timbrature-utils";
 import { computeWindow, type WindowState } from "@/lib/timbra-window";
 import { toast } from "sonner";
 import type { TimbraConferma } from "@/components/timbra-conferma-dialog";
@@ -101,24 +101,25 @@ export function useTimbratura() {
 
     setBusy(true);
     try {
-      const foto_in_url = file ? await uploadSelfie(user.id, file, "in") : null;
+      const foto_in_path = file ? await uploadSelfie(user.id, file, "in") : null;
       const orario = new Date();
       const { error } = await supabase.from("timbrature").insert({
         dipendente_id: user.id,
         data: oggi,
         orario_clock_in: orario.toISOString(),
-        foto_in_url,
+        foto_in_url: foto_in_path,
       });
       if (error) throw error;
+
+      // FIX: genera signed URL per mostrare la foto nel dialog di conferma
+      const fotoUrl = foto_in_path ? await getSelfieSignedUrl(foto_in_path) : null;
+
       setConferma({
         tipo: "in",
         orario,
-        fotoUrl: foto_in_url,
+        fotoUrl,
         ritardoMin: minutiRitardo,
       });
-      // FIX #2: il toast mostra il ritardo SOLO se windowState è "late"
-      // (minutiRitardo > 0 non è sufficiente: può essere > 0 anche in freeMode
-      // o in edge-case di calcolo senza che l'utente sia effettivamente in ritardo).
       toast.success(
         windowState === "late" && minutiRitardo > 0
           ? `Entrata con ${minutiRitardo} min di ritardo`
@@ -144,23 +145,27 @@ export function useTimbratura() {
     }
     setBusy(true);
     try {
-      const foto_out_url = (file && user) ? await uploadSelfie(user.id, file, "out") : null;
+      const foto_out_path = (file && user) ? await uploadSelfie(user.id, file, "out") : null;
       const orario = new Date();
       const { error } = await supabase
         .from("timbrature")
         .update({
           orario_clock_out: orario.toISOString(),
-          foto_out_url,
+          foto_out_url: foto_out_path,
         })
         .eq("id", sessioneAttiva.id);
 
       if (error) throw error;
+
+      // FIX: genera signed URL per mostrare la foto nel dialog di conferma
+      const fotoUrl = foto_out_path ? await getSelfieSignedUrl(foto_out_path) : null;
+
       const ore = oreTimbratura(sessioneAttiva.orario_clock_in, orario.toISOString());
       setConferma({
         tipo: "out",
         orario,
         oreSessione: ore,
-        fotoUrl: foto_out_url,
+        fotoUrl,
       });
       toast.success("Uscita timbrata");
       qc.invalidateQueries({ queryKey: ["timb-oggi"] });
