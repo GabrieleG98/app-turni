@@ -76,20 +76,21 @@ export function CorrezioneDialog({ open, onOpenChange, defaultDate, timbraturaId
 
       if (error) throw error;
 
-      // Recupera nome dipendente e tutti i manager/owner
-      const [{ data: profilo }, { data: managers }] = await Promise.all([
+      // Recupera nome dipendente e tutti i manager tramite user_roles
+      const [{ data: profilo }, { data: managerRoles }] = await Promise.all([
         supabase.from("profiles").select("nome, cognome").eq("id", user.id).single(),
-        supabase.from("profiles").select("id").in("ruolo", ["manager", "owner"]),
+        supabase.from("user_roles").select("user_id").eq("role", "manager"),
       ]);
 
-      if (managers && managers.length > 0) {
+      if (managerRoles && managerRoles.length > 0) {
         const nomeDip = profilo ? `${profilo.nome} ${profilo.cognome}` : "Un dipendente";
         const tipoLabel = TIPO_LABEL[tipo];
 
-        const notifiche = managers.map((m) => ({
-          user_id: m.id,
-          titolo: "Richiesta correzione timbratura",
+        const notifiche = managerRoles.map((m) => ({
+          user_id: m.user_id,
+          titolo: "⚠️ Richiesta correzione timbratura",
           descrizione: `${nomeDip} ha segnalato un errore (${tipoLabel}) per il ${data}.`,
+          tipo: "generico" as const,
           link: "/manager/timbrature",
         }));
 
