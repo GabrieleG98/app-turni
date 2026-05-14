@@ -15,13 +15,15 @@ import {
 import {
   LayoutDashboard, CalendarDays, Users, FileText, LogOut, Hotel,
   ArrowRightLeft, ListChecks, UserCircle, CalendarRange,
-  UserCog, Clock,
+  UserCog, Clock, AlertTriangle,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const gruppi = [
+const BASE_GRUPPI = [
   {
     label: "📋 Gestione",
     items: [
@@ -64,6 +66,34 @@ export function ManagerSidebar() {
     else setOpen(false);
   };
 
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["correzioni-pending-count"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("timbrature_correzioni")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+  });
+
+  const gruppi = BASE_GRUPPI.map((g) => {
+    if (g.label !== "👥 Persone") return g;
+    return {
+      ...g,
+      items: [
+        ...g.items,
+        {
+          title: "Correzioni",
+          url: "/manager/correzioni",
+          icon: AlertTriangle,
+          badge: pendingCount > 0 ? pendingCount : undefined,
+        },
+      ],
+    };
+  });
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
@@ -83,12 +113,18 @@ export function ManagerSidebar() {
               <SidebarMenu>
                 {gruppo.items.map((item) => {
                   const active = path.startsWith(item.url);
+                  const badge = (item as any).badge as number | undefined;
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active}>
                         <Link to={item.url} className="flex items-center gap-2" onClick={closeSidebar}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="flex-1">{item.title}</span>
+                          {badge !== undefined && (
+                            <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold px-1">
+                              {badge}
+                            </span>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
