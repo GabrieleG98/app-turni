@@ -17,7 +17,7 @@ import {
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2, ChevronDown, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -45,6 +45,8 @@ function DettaglioDipendente() {
   const [paginaTimb, setPaginaTimb] = useState(0);
   const RIGHE_PER_PAGINA = 7;
   const eliminaFn = useServerFn(eliminaDipendente);
+
+  const isSettimanaCorrente = isoData(inizio) === isoData(inizioSettimana());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
@@ -140,8 +142,8 @@ function DettaglioDipendente() {
         <Card className="p-6">
           <h1 className="text-2xl font-bold">{profilo.nome} {profilo.cognome}</h1>
           <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
-            <span>Ruolo: <span className="text-foreground">{profilo.ruolo_lavoro || "—"}</span></span>
-            <span>Reparto: <span className="text-foreground">{profilo.reparto || "—"}</span></span>
+            <span>Ruolo: <span className="text-foreground">{profilo.ruolo_lavoro || "\u2014"}</span></span>
+            <span>Reparto: <span className="text-foreground">{profilo.reparto || "\u2014"}</span></span>
           </div>
         </Card>
       )}
@@ -150,7 +152,7 @@ function DettaglioDipendente() {
         <Card className="p-6 space-y-4">
           <div>
             <h2 className="font-semibold">Modifica dati lavorativi</h2>
-            <p className="text-xs text-muted-foreground">Solo il proprietario può modificare ruolo e reparto di tutti i membri.</p>
+            <p className="text-xs text-muted-foreground">Solo il proprietario pu\u00f2 modificare ruolo e reparto di tutti i membri.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -177,6 +179,16 @@ function DettaglioDipendente() {
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
+        {!isSettimanaCorrente && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-xs gap-1"
+            onClick={() => setInizio(inizioSettimana())}
+          >
+            <CalendarCheck className="h-3.5 w-3.5" /> Oggi
+          </Button>
+        )}
         <div className="ml-auto text-sm">
           Ore lavorate: <span className="font-bold">{fmtOre(oreEffettive)}</span>
         </div>
@@ -196,7 +208,7 @@ function DettaglioDipendente() {
                   : "bg-turno-sera text-turno-sera-foreground"
                 }`}>
                   <div className="font-semibold capitalize">{t.tipo_turno}</div>
-                  <div>{t.ora_inizio.slice(0, 5)}–{t.ora_fine.slice(0, 5)}</div>
+                  <div>{t.ora_inizio.slice(0, 5)}\u2013{t.ora_fine.slice(0, 5)}</div>
                   {t.location && <div className="opacity-80">{t.location}</div>}
                 </div>
               ) : (
@@ -214,7 +226,6 @@ function DettaglioDipendente() {
   {timbrature.length === 0 ? (
     <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
   ) : (() => {
-    // Raggruppa per data
     const grouped = timbrature.reduce((acc, t) => {
       const d = t.data;
       if (!acc[d]) acc[d] = [];
@@ -248,7 +259,6 @@ function DettaglioDipendente() {
           );
           return (
             <div key={data} className="border rounded-md overflow-hidden">
-              {/* Riga data cliccabile */}
               <button
                 onClick={() => toggleGiorno(data)}
                 className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40 transition-colors"
@@ -265,7 +275,6 @@ function DettaglioDipendente() {
                 </span>
               </button>
 
-              {/* Dettaglio sessioni a tendina */}
               {aperto && (
                 <div className="border-t divide-y bg-muted/10">
                   {sessioni.map((t) => {
@@ -281,7 +290,7 @@ function DettaglioDipendente() {
                           />
                           <span className="text-muted-foreground tabular-nums">
                             {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                            {" → "}
+                            {" \u2192 "}
                             {t.orario_clock_out
                               ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
                               : <em>in corso</em>}
@@ -294,7 +303,7 @@ function DettaglioDipendente() {
                           />
                         </div>
                         <span className="font-medium shrink-0 w-12 text-right text-xs">
-                          {ore !== null ? fmtOre(ore) : "—"}
+                          {ore !== null ? fmtOre(ore) : "\u2014"}
                         </span>
                       </div>
                     );
@@ -305,7 +314,6 @@ function DettaglioDipendente() {
           );
         })}
 
-        {/* Paginazione */}
         {totPagine > 1 && (
           <div className="flex items-center justify-between pt-2">
             <Button
@@ -339,7 +347,7 @@ function DettaglioDipendente() {
           <h2 className="font-semibold text-destructive">Zona pericolo</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Rimuovi {profilo.nome} {profilo.cognome} dal team. L'account e tutti i suoi dati
-            (turni, timbrature, pause, task, disponibilità, scambi, correzioni, messaggi e
+            (turni, timbrature, pause, task, disponibilit\u00e0, scambi, correzioni, messaggi e
             notifiche) verranno eliminati definitivamente.
           </p>
           <Button
