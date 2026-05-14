@@ -105,12 +105,8 @@ function ManagerTasks() {
     setReparto(""); setRichiedeFoto(false);
   };
 
-  // FIX #4: la funzione destinatari esclude SEMPRE il manager corrente,
-  // indipendentemente dal fatto che assegnatoA sia "__all__" o un ID specifico.
-  // Prima escludeva il manager solo nel caso "__all__".
   const destinatari = (tAssegnatoA: string | null, tReparto: string | null): string[] => {
     if (tAssegnatoA) {
-      // singolo destinatario: ok solo se non è il manager stesso
       return tAssegnatoA !== user?.id ? [tAssegnatoA] : [];
     }
     let dips: any[] = dipendenti;
@@ -176,6 +172,18 @@ function ManagerTasks() {
 
     toast.success("Template eliminato");
     qc.invalidateQueries({ queryKey: ["task-templates"] });
+  };
+
+  // Elimina una singola istanza di task completata di oggi
+  const eliminaTaskCompletata = async (taskId: string, taskTitolo: string) => {
+    if (!confirm(`Eliminare il task "${taskTitolo}"?`)) return;
+    const { error } = await supabase
+      .from("task_assegnati")
+      .delete()
+      .eq("id", taskId);
+    if (error) return toast.error("Errore", { description: error.message });
+    toast.success("Task eliminata");
+    qc.invalidateQueries({ queryKey: ["task-oggi-manager", oggi] });
   };
 
   const nomeDip = (id: string | null) => {
@@ -297,11 +305,24 @@ function ManagerTasks() {
                       {done && ` · ${new Date(t.completato_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
                     </div>
                   </div>
-                  {t.foto_url && (
-                    <Button variant="ghost" size="sm" onClick={() => apriFoto(t.foto_url)}>
-                      <Camera className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {t.foto_url && (
+                      <Button variant="ghost" size="sm" onClick={() => apriFoto(t.foto_url)}>
+                        <Camera className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {done && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => eliminaTaskCompletata(t.id, t.titolo)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Elimina
+                      </Button>
+                    )}
+                  </div>
                 </li>
               );
             })}

@@ -138,7 +138,6 @@ function HomeOggi() {
               <Sparkles className="h-5 w-5 text-brand" />
               <div>
                 <div className="font-medium text-foreground">Nessun turno schedulato</div>
-                <div className="text-sm">Puoi comunque timbrare liberamente.</div>
               </div>
             </div>
           )}
@@ -214,12 +213,6 @@ function HomeOggi() {
                 ))}
               </div>
             )}
-          </Card>
-        )}
-
-        {!haGiaSessioni && !inTurno && (
-          <Card className="p-3 text-center text-xs text-muted-foreground border-dashed">
-            Usa il pulsante <span className="font-semibold text-foreground">Timbra</span> per registrare entrate/uscita che trovi nella slide a destra.
           </Card>
         )}
 

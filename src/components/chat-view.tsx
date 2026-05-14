@@ -77,7 +77,8 @@ export function ChatView({ isManager }: { isManager: boolean }) {
     return p ? `${p.nome} ${p.cognome}`.trim() : "Utente";
   };
 
-  // Realtime
+  // Realtime — aggiorna la cache solo per messaggi di ALTRI utenti.
+  // Il proprio messaggio è già inserito in modo ottimistico in invia().
   useEffect(() => {
     if (!canaleId) return;
     const ch = supabase
@@ -85,13 +86,22 @@ export function ChatView({ isManager }: { isManager: boolean }) {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messaggi", filter: `canale_id=eq.${canaleId}` },
-        () => qc.invalidateQueries({ queryKey: ["chat-messaggi", canaleId] })
+        (payload) => {
+          const nuovo = payload.new as Messaggio;
+          // Ignora i messaggi inviati da questo utente (già in cache in modo ottimistico)
+          if (nuovo.autore_id === user?.id) return;
+          qc.setQueryData<Messaggio[]>(["chat-messaggi", canaleId], (prev = []) => {
+            // evita duplicati
+            if (prev.some((m) => m.id === nuovo.id)) return prev;
+            return [...prev, nuovo];
+          });
+        }
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [canaleId, qc]);
+  }, [canaleId, qc, user?.id]);
 
   // Auto-scroll
   useEffect(() => {
@@ -105,51 +115,60 @@ export function ChatView({ isManager }: { isManager: boolean }) {
     const testo = bozza.trim();
     if (!testo || !canaleId || !user) return;
 
-    // 1. Inserisci il messaggio in chat_messaggi
-    const { error } = await supabase.from("chat_messaggi").insert({
+    // Optimistic update: aggiungi subito il messaggio in cache con un ID temporaneo
+    const tempId = `temp-${Date.now()}`;
+    const msgOttimistico: Messaggio = {
+      id: tempId,
       canale_id: canaleId,
       autore_id: user.id,
       contenuto: testo,
-    });
+      created_at: new Date().toISOString(),
+    };
+    qc.setQueryData<Messaggio[]>(["chat-messaggi", canaleId], (prev = []) => [
+      ...prev,
+      msgOttimistico,
+    ]);
+    setBozza("");
+
+    // Inserimento reale
+    const { data: inserted, error } = await supabase
+      .from("chat_messaggi")
+      .insert({ canale_id: canaleId, autore_id: user.id, contenuto: testo })
+      .select()
+      .single();
 
     if (error) {
+      // Rollback: rimuovi il messaggio ottimistico
+      qc.setQueryData<Messaggio[]>(["chat-messaggi", canaleId], (prev = []) =>
+        prev.filter((m) => m.id !== tempId)
+      );
+      setBozza(testo);
       return toast.error("Errore", { description: error.message });
     }
 
-    setBozza("");
+    // Sostituisci il temp con il messaggio reale (ID definitivo dal DB)
+    qc.setQueryData<Messaggio[]>(["chat-messaggi", canaleId], (prev = []) =>
+      prev.map((m) => (m.id === tempId ? (inserted as Messaggio) : m))
+    );
 
-    // 2. Crea le notifiche per gli altri utenti del canale
+    // Notifiche agli altri utenti del canale
     try {
       const canale = canali.find((c) => c.id === canaleId);
       if (!canale) return;
-
-      // Recupera il nome dell'autore
       const autore = profili.find((p: any) => p.id === user.id);
-      const nomeAutore = autore ? `${autore.nome} ${autore.cognome}`.trim() : "Un collega";
-
-      // Prendi tutti gli utenti (profiles) tranne l'autore
+      const nomeAut = autore ? `${autore.nome} ${autore.cognome}`.trim() : "Un collega";
       const destinatari = (profili as any[]).filter((p) => p.id !== user.id);
-
-      if (destinatari.length === 0) return;
-
-      // Prepara le righe di notifica
-      const notificheToInsert = destinatari.map((dest) => ({
-        user_id: dest.id,
-        titolo: "Nuovo messaggio in chat",
-        descrizione: `Hai un nuovo messaggio da ${nomeAutore} nel canale #${canale.nome}`,
-        link: isManager ? "/manager/chat" : "/dipendente/chat",
-      }));
-
-      // Inserisci le notifiche
-      const { error: notifError } = await supabase
-        .from("notifiche")
-        .insert(notificheToInsert);
-
-      if (notifError) {
-        console.error("Errore inserimento notifiche:", notifError);
-      }
+      if (!destinatari.length) return;
+      await supabase.from("notifiche").insert(
+        destinatari.map((dest) => ({
+          user_id: dest.id,
+          titolo: "Nuovo messaggio in chat",
+          descrizione: `Hai un nuovo messaggio da ${nomeAut} nel canale #${canale.nome}`,
+          link: isManager ? "/manager/chat" : "/dipendente/chat",
+        }))
+      );
     } catch (e) {
-      console.error("Errore generico notifiche:", e);
+      console.error("Errore notifiche:", e);
     }
   };
 
