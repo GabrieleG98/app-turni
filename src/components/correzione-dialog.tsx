@@ -20,6 +20,13 @@ const TIPI: { value: Tipo; label: string }[] = [
   { value: "altro", label: "Altro" },
 ];
 
+const TIPO_LABEL: Record<Tipo, string> = {
+  mancata_clock_in: "mancata clock-in",
+  mancata_clock_out: "mancata clock-out",
+  orario_errato: "orario errato",
+  altro: "altro",
+};
+
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -51,23 +58,53 @@ export function CorrezioneDialog({ open, onOpenChange, defaultDate, timbraturaId
     if (!user) return;
     if (!motivo.trim()) { toast.error("Inserisci un motivo"); return; }
     setBusy(true);
-    const orario_richiesto_in = oraIn ? new Date(`${data}T${oraIn}`).toISOString() : null;
-    const orario_richiesto_out = oraOut ? new Date(`${data}T${oraOut}`).toISOString() : null;
-    const { error } = await supabase.from("timbrature_correzioni").insert({
-      dipendente_id: user.id,
-      timbratura_id: timbraturaId ?? null,
-      data,
-      tipo,
-      orario_richiesto_in,
-      orario_richiesto_out,
-      motivo: motivo.trim(),
-      status: "pending",
-    });
-    setBusy(false);
-    if (error) { toast.error("Errore", { description: error.message }); return; }
-    toast.success("Richiesta inviata al manager");
-    qc.invalidateQueries({ queryKey: ["correzioni"] });
-    onOpenChange(false);
+
+    try {
+      const orario_richiesto_in = oraIn ? new Date(`${data}T${oraIn}`).toISOString() : null;
+      const orario_richiesto_out = oraOut ? new Date(`${data}T${oraOut}`).toISOString() : null;
+
+      const { error } = await supabase.from("timbrature_correzioni").insert({
+        dipendente_id: user.id,
+        timbratura_id: timbraturaId ?? null,
+        data,
+        tipo,
+        orario_richiesto_in,
+        orario_richiesto_out,
+        motivo: motivo.trim(),
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      // Recupera nome dipendente e tutti i manager/owner
+      const [{ data: profilo }, { data: managers }] = await Promise.all([
+        supabase.from("profiles").select("nome, cognome").eq("id", user.id).single(),
+        supabase.from("profiles").select("id").in("ruolo", ["manager", "owner"]),
+      ]);
+
+      if (managers && managers.length > 0) {
+        const nomeDip = profilo ? `${profilo.nome} ${profilo.cognome}` : "Un dipendente";
+        const tipoLabel = TIPO_LABEL[tipo];
+
+        const notifiche = managers.map((m) => ({
+          user_id: m.id,
+          titolo: "Richiesta correzione timbratura",
+          descrizione: `${nomeDip} ha segnalato un errore (${tipoLabel}) per il ${data}.`,
+          link: "/manager/timbrature",
+        }));
+
+        const { error: notErr } = await supabase.from("notifiche").insert(notifiche);
+        if (notErr) console.warn("Notifica non inviata:", notErr.message);
+      }
+
+      toast.success("Richiesta inviata al manager");
+      qc.invalidateQueries({ queryKey: ["correzioni"] });
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error("Errore", { description: e.message });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
