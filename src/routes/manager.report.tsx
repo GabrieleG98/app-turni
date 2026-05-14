@@ -12,13 +12,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableFoot, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   fmtOre, fmtSettimana, inizioSettimana, isoData, oreTimbratura, oreTraOrari,
 } from "@/lib/date-utils";
-import { addDays, addWeeks, format } from "date-fns";
-import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
+import { addDays, addWeeks, format, startOfMonth, endOfMonth } from "date-fns";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/report")({
@@ -30,25 +30,29 @@ function Report() {
   const [reparto, setReparto] = useState<string>("tutti");
   const fine = addDays(inizio, 6);
 
+  const goToThisMonth = () => {
+    setInizio(startOfMonth(new Date()));
+  };
+
   const { data: profili = [], isLoading: loadingProfili } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => (await supabase.from("profiles").select("*").order("cognome")).data ?? [],
   });
 
   const { data: turni = [], isLoading: loadingTurni } = useQuery({
-    queryKey: ["turni-rep", isoData(inizio)],
+    queryKey: ["turni-rep", isoData(inizio), isoData(fine)],
     queryFn: async () => (await supabase.from("turni").select("*")
       .gte("data", isoData(inizio)).lte("data", isoData(fine))).data ?? [],
   });
 
   const { data: timbrature = [] } = useQuery({
-    queryKey: ["timb-rep", isoData(inizio)],
+    queryKey: ["timb-rep", isoData(inizio), isoData(fine)],
     queryFn: async () => (await supabase.from("timbrature").select("*")
       .gte("data", isoData(inizio)).lte("data", isoData(fine))).data ?? [],
   });
 
   const { data: pause = [] } = useQuery({
-    queryKey: ["pause-rep", isoData(inizio)],
+    queryKey: ["pause-rep", isoData(inizio), isoData(fine)],
     queryFn: async () => (await supabase.from("pause").select("*")
       .gte("inizio", new Date(isoData(inizio)).toISOString())
       .lte("inizio", new Date(isoData(fine) + "T23:59:59").toISOString())).data ?? [],
@@ -78,6 +82,18 @@ function Report() {
     [tutteLighe, reparto],
   );
 
+  // Totali
+  const totOreP = righe.reduce((s, r) => s + r.oreP, 0);
+  const totOreE = righe.reduce((s, r) => s + r.oreE, 0);
+  const totStraord = righe.reduce((s, r) => s + r.straord, 0);
+  const totDiff = righe.reduce((s, r) => s + r.diff, 0);
+
+  // Range label
+  const isMese = fine.getTime() - inizio.getTime() > 7 * 24 * 60 * 60 * 1000 - 1000;
+  const rangeLabel = isMese
+    ? format(inizio, "MMMM yyyy")
+    : fmtSettimana(inizio);
+
   const esportaExcel = () => {
     const titolo = `Report ore · ${format(inizio, "dd/MM/yyyy")} – ${format(fine, "dd/MM/yyyy")}`;
     const header = [
@@ -86,47 +102,25 @@ function Report() {
       "Ore nette", "Straordinario", "Differenza",
     ];
     const dataRows = righe.map(({ p, oreP, oreLordo, minPause, oreE, straord, diff }) => [
-      p.cognome,
-      p.nome,
-      p.reparto || "",
-      p.ruolo_lavoro || "",
-      Number(oreP.toFixed(2)),
-      Number(oreLordo.toFixed(2)),
-      Math.round(minPause),
-      Number(oreE.toFixed(2)),
-      Number(straord.toFixed(2)),
-      Number(diff.toFixed(2)),
+      p.cognome, p.nome, p.reparto || "", p.ruolo_lavoro || "",
+      Number(oreP.toFixed(2)), Number(oreLordo.toFixed(2)), Math.round(minPause),
+      Number(oreE.toFixed(2)), Number(straord.toFixed(2)), Number(diff.toFixed(2)),
     ]);
-
     const totali = [
       "TOTALI", "", "", "",
-      Number(righe.reduce((s, r) => s + r.oreP, 0).toFixed(2)),
-      Number(righe.reduce((s, r) => s + r.oreLordo, 0).toFixed(2)),
+      Number(totOreP.toFixed(2)), Number(righe.reduce((s, r) => s + r.oreLordo, 0).toFixed(2)),
       Math.round(righe.reduce((s, r) => s + r.minPause, 0)),
-      Number(righe.reduce((s, r) => s + r.oreE, 0).toFixed(2)),
-      Number(righe.reduce((s, r) => s + r.straord, 0).toFixed(2)),
-      Number(righe.reduce((s, r) => s + r.diff, 0).toFixed(2)),
+      Number(totOreE.toFixed(2)), Number(totStraord.toFixed(2)), Number(totDiff.toFixed(2)),
     ];
-
-    const aoa: (string | number)[][] = [
-      [titolo],
-      [],
-      header,
-      ...dataRows,
-      [],
-      totali,
-    ];
-
+    const aoa: (string | number)[][] = [[titolo], [], header, ...dataRows, [], totali];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"] = [
       { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
-      { wch: 16 }, { wch: 12 }, { wch: 12 },
-      { wch: 12 }, { wch: 14 }, { wch: 12 },
+      { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
     ];
     ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: header.length - 1 } }];
-    const headerRowIdx = 2;
     for (let c = 0; c < header.length; c++) {
-      const ref = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+      const ref = XLSX.utils.encode_cell({ r: 2, c });
       const cell = ws[ref];
       if (cell) cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
     }
@@ -156,16 +150,22 @@ function Report() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Report ore</h1>
-        <p className="text-sm text-muted-foreground">Riepilogo settimanale</p>
+        <p className="text-sm text-muted-foreground">Riepilogo ore pianificate, lavorate e straordinari</p>
       </div>
 
       <Card className="p-4 flex items-center gap-3 flex-wrap">
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, -1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="font-medium min-w-[220px] text-center">{fmtSettimana(inizio)}</div>
+        <div className="font-medium min-w-[220px] text-center">{rangeLabel}</div>
         <Button variant="outline" size="icon" onClick={() => setInizio(addWeeks(inizio, 1))}>
           <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setInizio(inizioSettimana())}>
+          Settimana
+        </Button>
+        <Button variant="ghost" size="sm" onClick={goToThisMonth} className="gap-1.5">
+          <CalendarRange className="h-3.5 w-3.5" /> Mese
         </Button>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Reparto:</span>
@@ -191,7 +191,7 @@ function Report() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <div className="text-xs uppercase font-semibold text-brand">Le mie ore</div>
-              <div className="text-sm text-muted-foreground">{mia.p.nome} {mia.p.cognome} · settimana corrente</div>
+              <div className="text-sm text-muted-foreground">{mia.p.nome} {mia.p.cognome} · periodo selezionato</div>
             </div>
             <div className="flex items-center gap-4 text-sm flex-wrap">
               <div><span className="text-muted-foreground">Pianificate:</span> <span className="font-semibold">{fmtOre(mia.oreP)}</span></div>
@@ -218,8 +218,9 @@ function Report() {
             <TableRow>
               <TableHead>Dipendente</TableHead>
               <TableHead className="hidden sm:table-cell">Reparto</TableHead>
-              <TableHead className="text-right hidden sm:table-cell">Ore pianificate</TableHead>
+              <TableHead className="text-right hidden sm:table-cell">Pianificate</TableHead>
               <TableHead className="text-right">Lavorate</TableHead>
+              <TableHead className="text-right hidden sm:table-cell">Straord.</TableHead>
               <TableHead className="text-right">Diff.</TableHead>
             </TableRow>
           </TableHeader>
@@ -231,11 +232,12 @@ function Report() {
                   <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : (
-              righe.map(({ p, oreP, oreE, diff }) => (
+              righe.map(({ p, oreP, oreE, straord, diff }) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
                     {p.nome} {p.cognome}
@@ -244,6 +246,15 @@ function Report() {
                   <TableCell className="hidden sm:table-cell">{p.reparto || "—"}</TableCell>
                   <TableCell className="text-right hidden sm:table-cell">{fmtOre(oreP)}</TableCell>
                   <TableCell className="text-right">{fmtOre(oreE)}</TableCell>
+                  <TableCell className="text-right hidden sm:table-cell">
+                    {straord > 0.05 ? (
+                      <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20">
+                        +{fmtOre(straord)}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className={`text-right font-medium ${
                     Math.abs(diff) < 0.05 ? "" : diff > 0 ? "text-foreground" : "text-destructive"
                   }`}>
@@ -253,6 +264,26 @@ function Report() {
               ))
             )}
           </TableBody>
+          {!isLoading && righe.length > 1 && (
+            <tfoot>
+              <tr className="border-t bg-muted/40 font-semibold text-sm">
+                <td className="p-3">Totali ({righe.length} persone)</td>
+                <td className="hidden sm:table-cell" />
+                <td className="p-3 text-right hidden sm:table-cell">{fmtOre(totOreP)}</td>
+                <td className="p-3 text-right">{fmtOre(totOreE)}</td>
+                <td className="p-3 text-right hidden sm:table-cell">
+                  {totStraord > 0.05 ? (
+                    <span className="text-amber-600">+{fmtOre(totStraord)}</span>
+                  ) : "—"}
+                </td>
+                <td className={`p-3 text-right ${
+                  Math.abs(totDiff) < 0.05 ? "" : totDiff > 0 ? "" : "text-destructive"
+                }`}>
+                  {totDiff > 0 ? "+" : ""}{fmtOre(totDiff)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </Table>
       </Card>
     </div>

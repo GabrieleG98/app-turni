@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { addDays, addWeeks, differenceInMinutes, parseISO } from "date-fns";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { addDays, addWeeks, differenceInMinutes, parseISO, startOfMonth, endOfMonth } from "date-fns";
+import { AlertTriangle, ChevronLeft, ChevronRight, Users, Clock, TrendingUp, AlertCircle, ExternalLink } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -35,6 +35,27 @@ import {
 export const Route = createFileRoute("/manager/dashboard")({
   component: Dashboard,
 });
+
+function KpiCard({ icon: Icon, label, value, sub, color }: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: string;
+}) {
+  return (
+    <Card className="p-4 flex items-start gap-3">
+      <div className={`mt-0.5 p-2 rounded-lg ${color ?? "bg-muted"}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</div>
+        <div className="text-2xl font-bold tabular-nums leading-tight">{value}</div>
+        {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+      </div>
+    </Card>
+  );
+}
 
 function Dashboard() {
   const [inizio, setInizio] = useState<Date>(inizioSettimana());
@@ -111,10 +132,6 @@ function Dashboard() {
       const tbDip = timbrature.filter((t) => t.dipendente_id === p.id);
       const oreE = tbDip.reduce((s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0);
       const turnoOggiDip = turniOggi.find((t) => t.dipendente_id === p.id);
-      // FIX #7: usa la PRIMA timbratura ordinata per orario_clock_in (non una casuale).
-      // Prima .find() prendeva la prima riga restituita dal DB senza ordinamento garantito.
-      // Ora timbratureOggi è ordinato ASC per orario_clock_in (vedi query sopra),
-      // quindi la prima sessione del giorno è sempre quella più antica = la vera entrata.
       const timbOggiDip = timbratureOggi.find((t) => t.dipendente_id === p.id);
       let ritardoMin: number | null = null;
       if (turnoOggiDip && timbOggiDip) {
@@ -127,6 +144,12 @@ function Dashboard() {
     });
   }, [profili, turni, timbrature, turniOggi, timbratureOggi, reparto, oggi]);
 
+  // KPI
+  const dipendentiConTurnoOggi = turniOggi.length;
+  const giaTimbrati = Array.from(new Set(timbratureOggi.map((t) => t.dipendente_id))).length;
+  const ritardi = righe.filter((r) => r.ritardoMin !== null).length;
+  const oreTotali = righe.reduce((s, r) => s + r.oreE, 0);
+
   const isLoading = loadingProfili || loadingTurni;
 
   return (
@@ -134,6 +157,38 @@ function Dashboard() {
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Panoramica ore pianificate vs lavorate</p>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard
+          icon={Users}
+          label="Turni oggi"
+          value={dipendentiConTurnoOggi}
+          sub={`${giaTimbrati} già timbranti`}
+          color="bg-blue-500/10 text-blue-600"
+        />
+        <KpiCard
+          icon={Clock}
+          label="Timbranti ora"
+          value={giaTimbrati}
+          sub={`su ${dipendentiConTurnoOggi} previsti`}
+          color="bg-emerald-500/10 text-emerald-600"
+        />
+        <KpiCard
+          icon={AlertCircle}
+          label="Ritardi"
+          value={ritardi}
+          sub={ritardi === 0 ? "Nessun ritardo" : `${ritardi} dip. in ritardo oggi`}
+          color={ritardi > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Ore lavorate"
+          value={fmtOre(oreTotali)}
+          sub="Questa settimana (filtrate)"
+          color="bg-amber-500/10 text-amber-600"
+        />
       </div>
 
       <Card className="p-4 flex flex-wrap items-center gap-3">
@@ -173,6 +228,7 @@ function Dashboard() {
               <TableHead className="text-right">Lavorate</TableHead>
               <TableHead className="text-right">Diff.</TableHead>
               <TableHead className="text-right hidden sm:table-cell">Oggi</TableHead>
+              <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -185,11 +241,12 @@ function Dashboard() {
                   <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-14 ml-auto rounded-full" /></TableCell>
                   <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20 ml-auto rounded-full" /></TableCell>
+                  <TableCell />
                 </TableRow>
               ))
             ) : righe.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   Nessun dipendente
                 </TableCell>
               </TableRow>
@@ -231,6 +288,14 @@ function Dashboard() {
                     ) : (
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                      <Link to="/manager/dipendenti/$id" params={{ id: p.id }}>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span className="sr-only">Apri scheda</span>
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
