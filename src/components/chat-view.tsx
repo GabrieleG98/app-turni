@@ -52,6 +52,8 @@ export function ChatView({ isManager }: { isManager: boolean }) {
   const { data: messaggi = [] } = useQuery({
     enabled: !!canaleId,
     queryKey: ["chat-messaggi", canaleId],
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("chat_messaggi")

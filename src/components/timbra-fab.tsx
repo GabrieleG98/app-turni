@@ -44,7 +44,7 @@ export function TimbraFAB() {
       : windowState === "missed"
       ? "Turno passato — chiedi una correzione al manager"
       : !turnoOggi && windowState === "available"
-      ? "Timbratura libera"
+      ? "Puoi timbrare ora"
       : "";
 
   const label = inTurno ? "Stop" : haGiaSessioni ? "Nuova" : "Timbra";
