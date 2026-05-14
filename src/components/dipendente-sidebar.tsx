@@ -5,8 +5,8 @@ import {
   SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  Home, CalendarDays, CalendarRange, ListChecks,
-  MessageCircle, User, Hotel, LogOut, Clock, CalendarCheck,
+  Home, CalendarDays, CalendarRange,
+  ListChecks, MessageCircle, User, Hotel, LogOut, Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/auth";
@@ -19,7 +19,6 @@ const gruppi = [
       { title: "Oggi", url: "/dipendente", icon: Home, exact: true },
       { title: "Turni", url: "/dipendente/turni", icon: CalendarDays },
       { title: "Calendario", url: "/calendario", icon: CalendarRange },
-      { title: "Disponibilità", url: "/dipendente/disponibilita", icon: CalendarCheck },
     ],
   },
   {

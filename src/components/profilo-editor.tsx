@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,12 +19,25 @@ const schema = z.object({
 
 export function ProfiloEditor() {
   const { user, profile, refresh } = useAuth();
-  const [nome, setNome] = useState(profile?.nome ?? "");
-  const [cognome, setCognome] = useState(profile?.cognome ?? "");
-  const [ruoloLavoro, setRuoloLavoro] = useState(profile?.ruolo_lavoro ?? "");
-  const [reparto, setReparto] = useState(profile?.reparto ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const [nome, setNome] = useState("");
+  const [cognome, setCognome] = useState("");
+  const [ruoloLavoro, setRuoloLavoro] = useState("");
+  const [reparto, setReparto] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Sincronizza i campi quando il profilo carica (asincrono)
+  useEffect(() => {
+    if (profile) {
+      setNome(profile.nome ?? "");
+      setCognome(profile.cognome ?? "");
+      setRuoloLavoro(profile.ruolo_lavoro ?? "");
+      setReparto(profile.reparto ?? "");
+    }
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [profile, user?.email]);
 
   const salva = async () => {
     if (!user) return;
@@ -35,16 +48,17 @@ export function ProfiloEditor() {
     }
     setBusy(true);
 
+    // Usa upsert per gestire sia il caso profilo esistente che non
     const { error: pErr } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id: user.id,
         nome: parsed.data.nome,
         cognome: parsed.data.cognome,
         ruolo_lavoro: parsed.data.ruolo_lavoro,
         reparto: parsed.data.reparto,
         email: parsed.data.email,
-      })
-      .eq("id", user.id);
+      }, { onConflict: "id" });
 
     if (pErr) {
       setBusy(false);
@@ -81,11 +95,11 @@ export function ProfiloEditor() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ruolo_lavoro">Ruolo lavoro</Label>
-          <Input id="ruolo_lavoro" value={ruoloLavoro} onChange={(e) => setRuoloLavoro(e.target.value)} maxLength={80} />
+          <Input id="ruolo_lavoro" value={ruoloLavoro} onChange={(e) => setRuoloLavoro(e.target.value)} maxLength={80} placeholder="es. Animatore, Cameriere…" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="reparto">Reparto</Label>
-          <Input id="reparto" value={reparto} onChange={(e) => setReparto(e.target.value)} maxLength={80} />
+          <Input id="reparto" value={reparto} onChange={(e) => setReparto(e.target.value)} maxLength={80} placeholder="es. Animazione, Ristorazione…" />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="email">Email</Label>

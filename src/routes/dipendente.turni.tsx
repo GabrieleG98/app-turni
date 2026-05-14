@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { fmtData, giorniSettimana, inizioSettimana, isoData, GIORNI, oreTraOrari } from "@/lib/date-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ArrowRightLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRightLeft, CalendarCheck } from "lucide-react";
 import { addWeeks } from "date-fns";
 import {
   Dialog,
@@ -45,6 +45,9 @@ function MieiTurni() {
   const oggi = isoData(new Date());
   const [swap, setSwap] = useState<SwapForm | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
+
+  const goToCurrentWeek = () => setInizio(inizioSettimana());
+  const isCurrentWeek = isoData(inizio) === isoData(inizioSettimana());
 
   const { data: turni = [] } = useQuery({
     enabled: !!user,
@@ -87,59 +90,56 @@ function MieiTurni() {
   const swapMap = new Map(mieiSwap.map((s) => [s.turno_id, s.status]));
 
   const inviaSwap = async () => {
-  if (!swap || !user) return;
-  if (!swap.a_dipendente) {
-    toast.error("Scegli un collega");
-    return;
-  }
+    if (!swap || !user) return;
+    if (!swap.a_dipendente) {
+      toast.error("Scegli un collega");
+      return;
+    }
 
-  // 1) Inserisci la richiesta di scambio
-  const { error } = await supabase.from("turno_swap_requests").insert({
-    turno_id: swap.turno_id,
-    da_dipendente: user.id,
-    a_dipendente: swap.a_dipendente,
-    motivo: swap.motivo || null,
-  });
+    const { error } = await supabase.from("turno_swap_requests").insert({
+      turno_id: swap.turno_id,
+      da_dipendente: user.id,
+      a_dipendente: swap.a_dipendente,
+      motivo: swap.motivo || null,
+    });
 
-  if (error) {
-    toast.error("Errore invio richiesta", { description: error.message });
-    return;
-  }
+    if (error) {
+      toast.error("Errore invio richiesta", { description: error.message });
+      return;
+    }
 
-  // 2) Recupera i manager/owner da notificare
-  const { data: managers } = await supabase
-    .from("profiles")
-    .select("id")
-    .in("ruolo", ["manager", "owner"]);
-
-  if (managers && managers.length > 0) {
-    // Recupera nome del richiedente e info turno per il testo
-    const turno = turni.find((t) => t.id === swap.turno_id);
-    const { data: profilo } = await supabase
+    const { data: managers } = await supabase
       .from("profiles")
-      .select("nome, cognome")
-      .eq("id", user.id)
-      .single();
+      .select("id")
+      .in("ruolo", ["manager", "owner"]);
 
-    const nomeRichiedente = profilo ? `${profilo.nome} ${profilo.cognome}` : "Un dipendente";
-    const turnoLabel = turno
-      ? `${turno.data} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
-      : "un turno";
+    if (managers && managers.length > 0) {
+      const turno = turni.find((t) => t.id === swap.turno_id);
+      const { data: profilo } = await supabase
+        .from("profiles")
+        .select("nome, cognome")
+        .eq("id", user.id)
+        .single();
 
-    const notifiche = managers.map((m) => ({
-      user_id: m.id,
-      titolo: "Nuova richiesta di scambio turno",
-      descrizione: `${nomeRichiedente} ha richiesto uno scambio per ${turnoLabel}.`,
-      link: "/manager/scambi",
-    }));
+      const nomeRichiedente = profilo ? `${profilo.nome} ${profilo.cognome}` : "Un dipendente";
+      const turnoLabel = turno
+        ? `${turno.data} · ${turno.tipo_turno} · ${turno.ora_inizio.slice(0, 5)}–${turno.ora_fine.slice(0, 5)}`
+        : "un turno";
 
-    await supabase.from("notifiche").insert(notifiche);
-  }
+      const notifiche = managers.map((m) => ({
+        user_id: m.id,
+        titolo: "Nuova richiesta di scambio turno",
+        descrizione: `${nomeRichiedente} ha richiesto uno scambio per ${turnoLabel}.`,
+        link: "/manager/scambi",
+      }));
 
-  toast.success("Richiesta inviata al manager");
-  setSwap(null);
-  qc.invalidateQueries({ queryKey: ["miei-swap"] });
-};
+      await supabase.from("notifiche").insert(notifiche);
+    }
+
+    toast.success("Richiesta inviata al manager");
+    setSwap(null);
+    qc.invalidateQueries({ queryKey: ["miei-swap"] });
+  };
 
   return (
     <>
@@ -154,8 +154,20 @@ function MieiTurni() {
           <Button variant="ghost" size="icon" onClick={() => setInizio(addWeeks(inizio, -1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="text-sm font-medium">
-            {fmtData(inizio, "d MMM")} – {fmtData(giorni[6], "d MMM")}
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium">
+              {fmtData(inizio, "d MMM")} – {fmtData(giorni[6], "d MMM")}
+            </div>
+            {!isCurrentWeek && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={goToCurrentWeek}
+              >
+                <CalendarCheck className="h-3.5 w-3.5" /> Oggi
+              </Button>
+            )}
           </div>
           <Button variant="ghost" size="icon" onClick={() => setInizio(addWeeks(inizio, 1))}>
             <ChevronRight className="h-4 w-4" />
