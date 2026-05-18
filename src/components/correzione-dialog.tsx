@@ -79,7 +79,7 @@ export function CorrezioneDialog({ open, onOpenChange, defaultDate, timbraturaId
       // Recupera nome dipendente e tutti i manager/owner tramite user_roles
       const [{ data: profilo }, { data: managerRoles }] = await Promise.all([
         supabase.from("profiles").select("nome, cognome").eq("id", user.id).single(),
-        supabase.from("user_roles").select("user_id").in("role", ["manager", "owner"]),
+        supabase.from("user_roles").select("user_id").eq("role", "manager"),
       ]);
 
       if (managerRoles && managerRoles.length > 0) {
