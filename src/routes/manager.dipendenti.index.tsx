@@ -93,10 +93,12 @@ function ListaDipendenti() {
     });
     setBusy(false);
     if (error) {
-      toast.error("Operazione fallita", { description: error.message });
+      console.error("set_user_role error:", error);
+      toast.error("Operazione fallita", { description: error.message ?? "Errore sconosciuto" });
     } else {
       toast.success(target.promote ? "Promosso a manager" : "Retrocesso a dipendente");
-      qc.invalidateQueries({ queryKey: ["user_roles"] });
+      await qc.invalidateQueries({ queryKey: ["user_roles"] });
+      await qc.invalidateQueries({ queryKey: ["profiles"] });
     }
     setTarget(null);
   };
