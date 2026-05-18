@@ -25,10 +25,13 @@ import { Route as ManagerScambiRouteImport } from './routes/manager.scambi'
 import { Route as ManagerReportRouteImport } from './routes/manager.report'
 import { Route as ManagerProfiloRouteImport } from './routes/manager.profilo'
 import { Route as ManagerDashboardRouteImport } from './routes/manager.dashboard'
+import { Route as ManagerCorrezioniRouteImport } from './routes/manager.correzioni'
 import { Route as DipendenteTurniRouteImport } from './routes/dipendente.turni'
 import { Route as DipendenteTimbraRouteImport } from './routes/dipendente.timbra'
 import { Route as DipendenteTasksRouteImport } from './routes/dipendente.tasks'
+import { Route as DipendenteReportRouteImport } from './routes/dipendente.report'
 import { Route as DipendenteProfiloRouteImport } from './routes/dipendente.profilo'
+import { Route as DipendenteDisponibilitaRouteImport } from './routes/dipendente.disponibilita'
 import { Route as ManagerDipendentiIndexRouteImport } from './routes/manager.dipendenti.index'
 import { Route as ManagerDipendentiIdRouteImport } from './routes/manager.dipendenti.$id'
 import { Route as ApiPublicHooksTaskReminderRouteImport } from './routes/api/public/hooks/task-reminder'
@@ -113,6 +116,11 @@ const ManagerDashboardRoute = ManagerDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ManagerCorrezioniRoute = ManagerCorrezioniRouteImport.update({
+  id: '/correzioni',
+  path: '/correzioni',
+  getParentRoute: () => ManagerRoute,
+} as any)
 const DipendenteTurniRoute = DipendenteTurniRouteImport.update({
   id: '/turni',
   path: '/turni',
@@ -128,9 +136,19 @@ const DipendenteTasksRoute = DipendenteTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => DipendenteRoute,
 } as any)
+const DipendenteReportRoute = DipendenteReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => DipendenteRoute,
+} as any)
 const DipendenteProfiloRoute = DipendenteProfiloRouteImport.update({
   id: '/profilo',
   path: '/profilo',
+  getParentRoute: () => DipendenteRoute,
+} as any)
+const DipendenteDisponibilitaRoute = DipendenteDisponibilitaRouteImport.update({
+  id: '/disponibilita',
+  path: '/disponibilita',
   getParentRoute: () => DipendenteRoute,
 } as any)
 const ManagerDipendentiIndexRoute = ManagerDipendentiIndexRouteImport.update({
@@ -155,13 +173,16 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof CalendarioRoute
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
-  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
+  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
+  '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
+  '/dipendente/report': typeof DipendenteReportRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -179,13 +200,16 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendario': typeof CalendarioRoute
   '/login': typeof LoginRoute
-  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
+  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
+  '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
+  '/dipendente/report': typeof DipendenteReportRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -205,13 +229,16 @@ export interface FileRoutesById {
   '/calendario': typeof CalendarioRoute
   '/dipendente': typeof DipendenteRouteWithChildren
   '/login': typeof LoginRoute
-  '/registrati': typeof RegistratiRoute
   '/manager': typeof ManagerRouteWithChildren
+  '/registrati': typeof RegistratiRoute
   '/unisciti-4fun': typeof Unisciti4funRoute
+  '/dipendente/disponibilita': typeof DipendenteDisponibilitaRoute
   '/dipendente/profilo': typeof DipendenteProfiloRoute
+  '/dipendente/report': typeof DipendenteReportRoute
   '/dipendente/tasks': typeof DipendenteTasksRoute
   '/dipendente/timbra': typeof DipendenteTimbraRoute
   '/dipendente/turni': typeof DipendenteTurniRoute
+  '/manager/correzioni': typeof ManagerCorrezioniRoute
   '/manager/dashboard': typeof ManagerDashboardRoute
   '/manager/profilo': typeof ManagerProfiloRoute
   '/manager/report': typeof ManagerReportRoute
@@ -232,13 +259,16 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/dipendente'
     | '/login'
-    | '/registrati'
     | '/manager'
+    | '/registrati'
     | '/unisciti-4fun'
+    | '/dipendente/disponibilita'
     | '/dipendente/profilo'
+    | '/dipendente/report'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -256,13 +286,16 @@ export interface FileRouteTypes {
     | '/'
     | '/calendario'
     | '/login'
-    | '/registrati'
     | '/manager'
+    | '/registrati'
     | '/unisciti-4fun'
+    | '/dipendente/disponibilita'
     | '/dipendente/profilo'
+    | '/dipendente/report'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -281,13 +314,16 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/dipendente'
     | '/login'
-    | '/registrati'
     | '/manager'
+    | '/registrati'
     | '/unisciti-4fun'
+    | '/dipendente/disponibilita'
     | '/dipendente/profilo'
+    | '/dipendente/report'
     | '/dipendente/tasks'
     | '/dipendente/timbra'
     | '/dipendente/turni'
+    | '/manager/correzioni'
     | '/manager/dashboard'
     | '/manager/profilo'
     | '/manager/report'
@@ -307,8 +343,8 @@ export interface RootRouteChildren {
   CalendarioRoute: typeof CalendarioRoute
   DipendenteRoute: typeof DipendenteRouteWithChildren
   LoginRoute: typeof LoginRoute
-  RegistratiRoute: typeof RegistratiRoute
   ManagerRoute: typeof ManagerRouteWithChildren
+  RegistratiRoute: typeof RegistratiRoute
   Unisciti4funRoute: typeof Unisciti4funRoute
   ApiPublicHooksTaskReminderRoute: typeof ApiPublicHooksTaskReminderRoute
 }
@@ -427,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerDashboardRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/correzioni': {
+      id: '/manager/correzioni'
+      path: '/correzioni'
+      fullPath: '/manager/correzioni'
+      preLoaderRoute: typeof ManagerCorrezioniRouteImport
+      parentRoute: typeof ManagerRoute
+    }
     '/dipendente/turni': {
       id: '/dipendente/turni'
       path: '/turni'
@@ -448,11 +491,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DipendenteTasksRouteImport
       parentRoute: typeof DipendenteRoute
     }
+    '/dipendente/report': {
+      id: '/dipendente/report'
+      path: '/report'
+      fullPath: '/dipendente/report'
+      preLoaderRoute: typeof DipendenteReportRouteImport
+      parentRoute: typeof DipendenteRoute
+    }
     '/dipendente/profilo': {
       id: '/dipendente/profilo'
       path: '/profilo'
       fullPath: '/dipendente/profilo'
       preLoaderRoute: typeof DipendenteProfiloRouteImport
+      parentRoute: typeof DipendenteRoute
+    }
+    '/dipendente/disponibilita': {
+      id: '/dipendente/disponibilita'
+      path: '/disponibilita'
+      fullPath: '/dipendente/disponibilita'
+      preLoaderRoute: typeof DipendenteDisponibilitaRouteImport
       parentRoute: typeof DipendenteRoute
     }
     '/manager/dipendenti/': {
@@ -480,7 +537,9 @@ declare module '@tanstack/react-router' {
 }
 
 interface DipendenteRouteChildren {
+  DipendenteDisponibilitaRoute: typeof DipendenteDisponibilitaRoute
   DipendenteProfiloRoute: typeof DipendenteProfiloRoute
+  DipendenteReportRoute: typeof DipendenteReportRoute
   DipendenteTasksRoute: typeof DipendenteTasksRoute
   DipendenteTimbraRoute: typeof DipendenteTimbraRoute
   DipendenteTurniRoute: typeof DipendenteTurniRoute
@@ -488,7 +547,9 @@ interface DipendenteRouteChildren {
 }
 
 const DipendenteRouteChildren: DipendenteRouteChildren = {
+  DipendenteDisponibilitaRoute: DipendenteDisponibilitaRoute,
   DipendenteProfiloRoute: DipendenteProfiloRoute,
+  DipendenteReportRoute: DipendenteReportRoute,
   DipendenteTasksRoute: DipendenteTasksRoute,
   DipendenteTimbraRoute: DipendenteTimbraRoute,
   DipendenteTurniRoute: DipendenteTurniRoute,
@@ -500,6 +561,7 @@ const DipendenteRouteWithChildren = DipendenteRoute._addFileChildren(
 )
 
 interface ManagerRouteChildren {
+  ManagerCorrezioniRoute: typeof ManagerCorrezioniRoute
   ManagerDashboardRoute: typeof ManagerDashboardRoute
   ManagerProfiloRoute: typeof ManagerProfiloRoute
   ManagerReportRoute: typeof ManagerReportRoute
@@ -513,6 +575,7 @@ interface ManagerRouteChildren {
 }
 
 const ManagerRouteChildren: ManagerRouteChildren = {
+  ManagerCorrezioniRoute: ManagerCorrezioniRoute,
   ManagerDashboardRoute: ManagerDashboardRoute,
   ManagerProfiloRoute: ManagerProfiloRoute,
   ManagerReportRoute: ManagerReportRoute,
@@ -533,21 +596,11 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarioRoute: CalendarioRoute,
   DipendenteRoute: DipendenteRouteWithChildren,
   LoginRoute: LoginRoute,
-  RegistratiRoute: RegistratiRoute,
   ManagerRoute: ManagerRouteWithChildren,
+  RegistratiRoute: RegistratiRoute,
   Unisciti4funRoute: Unisciti4funRoute,
   ApiPublicHooksTaskReminderRoute: ApiPublicHooksTaskReminderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
