@@ -39,9 +39,9 @@ interface Correzione {
   orario_richiesto_out: string | null;
   motivo: string;
   status: Status;
-  nota_manager: string | null;
+  note_manager: string | null;
   created_at: string;
-  revisione_at: string | null;
+  decisione_at: string | null;
 }
 
 function fmtOra(iso: string | null) {
@@ -100,9 +100,9 @@ function CorrezioniPage() {
         .from("timbrature_correzioni")
         .update({
           status: decisione,
-          nota_manager: nota.trim() || null,
-          revisione_di: user?.id ?? null,
-          revisione_at: new Date().toISOString(),
+          note_manager: nota.trim() || null,
+          decisione_di: user?.id ?? null,
+          decisione_at: new Date().toISOString(),
         })
         .eq("id", dialogRow.id);
 
@@ -173,9 +173,9 @@ function CorrezioniPage() {
           "{c.motivo}"
         </div>
 
-        {c.nota_manager && (
+        {c.note_manager && (
           <div className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-2">
-            <span className="font-medium">Nota manager:</span> {c.nota_manager}
+            <span className="font-medium">Nota manager:</span> {c.note_manager}
           </div>
         )}
 
