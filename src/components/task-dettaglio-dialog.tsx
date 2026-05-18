@@ -67,14 +67,14 @@ export function TaskDettaglioDialog({ task, richiedeFoto, onClose, invalidateKey
     try {
       // Recupera tutti i manager
       const { data: managers } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("ruolo", "manager");
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "manager");
       if (!managers?.length) return;
       const nomeDip = profile ? `${(profile as any).nome} ${(profile as any).cognome}` : "Un dipendente";
       await supabase.from("notifiche").insert(
         managers.map((m: any) => ({
-          user_id: m.id,
+          user_id: m.user_id,
           titolo: "✅ Task completata",
           descrizione: `${nomeDip} ha completato: "${taskTitolo}"`,
           link: "/manager/tasks",

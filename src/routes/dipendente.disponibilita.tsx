@@ -22,13 +22,19 @@ export const Route = createFileRoute("/dipendente/disponibilita")({
   component: Disponibilita,
 });
 
-type Stato = "disponibile" | "non_disponibile" | "parziale";
+type Stato = "disponibile" | "non_disponibile" | "preferito";
 
 const STATO_CONFIG: Record<Stato, { label: string; color: string; icon: React.ElementType }> = {
   disponibile: { label: "Disponibile", color: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30", icon: CheckCircle2 },
   non_disponibile: { label: "Non disponibile", color: "bg-destructive/15 text-destructive border-destructive/30", icon: XCircle },
-  parziale: { label: "Parziale", color: "bg-amber-500/15 text-amber-700 border-amber-500/30", icon: MinusCircle },
+  preferito: { label: "Preferito", color: "bg-amber-500/15 text-amber-700 border-amber-500/30", icon: MinusCircle },
 };
+
+// ISO day-of-week: 1=Mon..7=Sun
+function isoDow(d: Date): number {
+  const js = d.getDay(); // 0=Sun..6=Sat
+  return js === 0 ? 7 : js;
+}
 
 function Disponibilita() {
   const { user } = useAuth();
@@ -36,35 +42,34 @@ function Disponibilita() {
   const [inizio, setInizio] = useState<Date>(inizioSettimana());
   const giorni = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(inizio, i)), [inizio]);
 
-  const [editing, setEditing] = useState<{ data: string; stato: Stato; note: string; id?: string } | null>(null);
+  const [editing, setEditing] = useState<{ data: string; giorno: number; stato: Stato; note: string; id?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const { data: disponibilita = [], isLoading } = useQuery({
     enabled: !!user,
-    queryKey: ["disponibilita-mia", isoData(inizio)],
+    queryKey: ["disponibilita-mia"],
     queryFn: async () => {
-      const fine = addDays(inizio, 6);
       const { data } = await supabase
         .from("disponibilita")
         .select("*")
-        .eq("dipendente_id", user!.id)
-        .gte("data", isoData(inizio))
-        .lte("data", isoData(fine));
+        .eq("dipendente_id", user!.id);
       return data ?? [];
     },
   });
 
-  const byData = useMemo(() => {
-    const m = new Map<string, typeof disponibilita[number]>();
-    disponibilita.forEach((d) => m.set(d.data, d));
+  const byGiorno = useMemo(() => {
+    const m = new Map<number, typeof disponibilita[number]>();
+    disponibilita.forEach((d) => m.set(d.giorno_settimana, d));
     return m;
   }, [disponibilita]);
 
   const apri = (data: string) => {
-    const existing = byData.get(data);
+    const giorno = isoDow(new Date(data + "T00:00:00"));
+    const existing = byGiorno.get(giorno);
     setEditing({
       data,
-      stato: (existing?.stato as Stato) ?? "disponibile",
+      giorno,
+      stato: (existing?.tipo as Stato) ?? "disponibile",
       note: existing?.note ?? "",
       id: existing?.id,
     });
@@ -73,15 +78,18 @@ function Disponibilita() {
   const salva = async () => {
     if (!editing || !user) return;
     setSaving(true);
-    const payload = {
-      dipendente_id: user.id,
-      data: editing.data,
-      stato: editing.stato,
-      note: editing.note || null,
-    };
     const { error } = editing.id
-      ? await supabase.from("disponibilita").update(payload).eq("id", editing.id)
-      : await supabase.from("disponibilita").insert(payload);
+      ? await supabase.from("disponibilita")
+          .update({ tipo: editing.stato, note: editing.note || null })
+          .eq("id", editing.id)
+      : await supabase.from("disponibilita").insert({
+          dipendente_id: user.id,
+          giorno_settimana: editing.giorno,
+          ora_inizio: "00:00",
+          ora_fine: "23:59",
+          tipo: editing.stato,
+          note: editing.note || null,
+        });
     setSaving(false);
     if (error) {
       toast.error("Errore salvataggio", { description: error.message });
@@ -137,8 +145,8 @@ function Disponibilita() {
           <div className="space-y-2">
             {giorni.map((g, i) => {
               const dataIso = isoData(g);
-              const disp = byData.get(dataIso);
-              const stato = disp?.stato as Stato | undefined;
+              const disp = byGiorno.get(isoDow(g));
+              const stato = disp?.tipo as Stato | undefined;
               const cfg = stato ? STATO_CONFIG[stato] : null;
               const oggi = dataIso === isoData(new Date());
 

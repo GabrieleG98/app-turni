@@ -110,7 +110,7 @@ function CorrezioniPage() {
 
       // Se approvata + timbratura collegata: applica i nuovi orari
       if (decisione === "approved" && dialogRow.timbratura_id) {
-        const updates: Record<string, string | null> = {};
+        const updates: { orario_clock_in?: string; orario_clock_out?: string } = {};
         if (dialogRow.orario_richiesto_in) updates.orario_clock_in = dialogRow.orario_richiesto_in;
         if (dialogRow.orario_richiesto_out) updates.orario_clock_out = dialogRow.orario_richiesto_out;
         if (Object.keys(updates).length > 0) {
