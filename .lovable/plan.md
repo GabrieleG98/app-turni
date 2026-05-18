@@ -1,48 +1,25 @@
-## Modifiche richieste
+## Problema individuato
 
-### 1. Voce "Correzione timbratura" nei menu
+La promozione chiama `set_user_role`, ma l’errore `new row violates row-level security policy ... user_roles` indica che l’inserimento finale in `user_roles` viene ancora valutato dalle policy RLS.
 
-Esiste già `CorrezioneDialog`, ma non c'è un punto d'accesso dedicato dal menu. Aggiungerò:
+Nel database la funzione esiste ed è `SECURITY DEFINER`, ma è opportuno renderla più robusta: evitare il ciclo `DELETE` + `INSERT` e usare un aggiornamento atomico con `UPSERT`, mantenendo i controlli lato server su manager/proprietario.
 
-- **Sidebar dipendente** (`src/components/dipendente-sidebar.tsx`): nuova voce "Correzioni" con icona `FileWarning` che apre una pagina dedicata.
-- **Sidebar manager** (`src/components/manager-sidebar.tsx`): la voce "Correzioni" punta già a `/manager/correzioni` — verificherò sia ben in evidenza.
-- **Nuova pagina** `src/routes/dipendente.correzioni.tsx`: lista delle proprie richieste (pending / approvate / rifiutate) con bottone "Nuova richiesta" che apre `CorrezioneDialog`. Mostra status e note del manager.
+## Piano di correzione
 
-### 2. "Timbra per" sempre disponibile per ogni clock-in/out
+1. Aggiornare la funzione database `public.set_user_role`
+   - Verificare che chi esegue sia manager.
+   - Impedire la retrocessione di sé stessi.
+   - Impedire modifiche al proprietario da parte di altri manager.
+   - Sostituire `DELETE` + `INSERT` con `INSERT ... ON CONFLICT (user_id) DO UPDATE`, così la promozione modifica il ruolo esistente senza passare da una sequenza fragile.
 
-Stato attuale: `manager.timbra-per.tsx` è ristretto a `isOwner` e mostra una sola riga per dipendente al giorno.
+2. Garantire il vincolo necessario su `user_roles`
+   - Assicurare che `user_id` sia univoco, perché un utente deve avere un solo ruolo applicativo alla volta.
+   - Questo rende l’`UPSERT` affidabile e previene ruoli duplicati.
 
-Modifiche:
-- **Accesso**: aprire la pagina a tutti i manager (non solo owner) → cambiare il guard da `isOwner` a `has_role manager`.
-- **Voce sidebar**: assicurarsi che sia visibile nella sidebar manager con icona chiara.
-- **Multi-sessione**: rimuovere `timbOf()` che prende solo la prima timbratura. Per ogni dipendente mostrare:
-  - tutte le sessioni di oggi (lista o conteggio + ultima)
-  - bottone "Clock-in" sempre disponibile (anche se ce ne sono già state, per gestire multi-sessione)
-  - bottone "Clock-out" sulla sessione attualmente aperta
-- **Manager nella lista**: includere anche i profili manager nell'elenco, così ognuno (inclusi i manager) può essere timbrato in qualsiasi momento.
+3. Lasciare invariata la UI esistente
+   - Il pulsante “Promuovi a manager” può continuare a chiamare `set_user_role`.
+   - Non cambio layout o flussi: correggo solo la causa backend dell’errore.
 
-### 3. Foto obbligatoria per ogni clock-in/out
-
-Stato attuale: la foto è opzionale (il file picker si apre ma se l'utente annulla la timbratura va comunque a buon fine senza foto).
-
-Modifiche:
-- **Hook `use-timbratura.ts`**: in `clockIn` / `clockOut`, se `file` è `null` → mostrare errore e abortire ("Foto richiesta per timbrare").
-- **`TimbraFAB`**: nel handler `onFile`, se l'utente chiude il picker senza selezionare nulla, non chiamare clock-in/out e mostrare un toast "Scatta una foto per timbrare".
-- **`manager.timbra-per`**: aggiungere selettore foto obbligatorio per riga (input `capture="environment"`) prima di permettere clock-in/out manuale; foto salvata in `timbrature-foto/<dipendente_id>/...` riutilizzando `uploadSelfie`.
-- **UI feedback**: il dialog di conferma `TimbraConfermaDialog` già supporta `fotoUrl`, mostriamo sempre la miniatura della foto appena scattata.
-
-### Aspetti tecnici
-
-- `timbrature-foto` bucket esiste già (privato). Le RLS attuali permettono al dipendente di caricare nella propria cartella. Per la pagina "Timbra per" il manager carica nella cartella del dipendente target → serve aggiornare la policy storage del bucket per consentire `INSERT` ai manager su qualsiasi path. Migrazione dedicata.
-- Nessuna nuova tabella richiesta. La tabella `timbrature_correzioni` esiste già con RLS adeguate.
-- Nessuna modifica al trigger `restrict_dipendente_timbrature_update` (continua a impedire modifiche manuali).
-
-### File toccati
-
-- `src/components/dipendente-sidebar.tsx` — nuova voce
-- `src/components/manager-sidebar.tsx` — verifica voce "Timbra per" / "Correzioni"
-- `src/routes/dipendente.correzioni.tsx` — nuova pagina
-- `src/hooks/use-timbratura.ts` — foto obbligatoria
-- `src/components/timbra-fab.tsx` — gestione cancellazione picker
-- `src/routes/manager.timbra-per.tsx` — accesso a tutti i manager, multi-sessione, foto obbligatoria, include manager nella lista
-- Migrazione SQL: policy storage `timbrature-foto` per consentire INSERT ai manager su qualsiasi cartella
+4. Validazione
+   - Dopo la migrazione, verificare definizione funzione e policy.
+   - Se necessario, ritestare la promozione dal browser e controllare che non compaia più l’errore RLS.
