@@ -1,7 +1,7 @@
 {
-  "name": "TimiAma | 4FUN",
-  "short_name": "TimiAma",
-  "description": "Turni, timbrature, chat e checklist per il team TimiAma 4FUN.",
+  "name": "ShiftUp",
+  "short_name": "ShiftUp",
+  "description": "Turni, timbrature e checklist per il team.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
