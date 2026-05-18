@@ -67,14 +67,25 @@ function ScambiPage() {
       : "turno assegnato";
 
     if (decisione === "approved") {
-      // FIX #3: operazione atomica tramite RPC per evitare stato inconsistente
-      // (se l'update del turno falliva, lo swap risultava già "approved" nel DB)
-      const { error } = await supabase.rpc("approve_swap", {
-        _swap_id: id,
-        _manager_id: user?.id ?? null,
-        _nuovo_dipendente: swap.a_dipendente,
-        _turno_id: swap.turno_id,
-      });
+      // Riassegna il turno al nuovo dipendente e aggiorna lo stato dello swap
+      const { error: turnoErr } = await supabase
+        .from("turni")
+        .update({ dipendente_id: swap.a_dipendente })
+        .eq("id", swap.turno_id);
+
+      if (turnoErr) {
+        toast.error("Errore aggiornamento turno", { description: turnoErr.message });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("turno_swap_requests")
+        .update({
+          status: "approved",
+          decisione_di: user?.id,
+          decisione_at: new Date().toISOString(),
+        })
+        .eq("id", id);
 
       if (error) {
         toast.error("Errore approvazione scambio", { description: error.message });
