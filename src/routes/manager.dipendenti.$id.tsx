@@ -29,14 +29,13 @@ export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
 });
 
+const SUPABASE_FUNCTIONS_URL = "https://cebipocoyzizvujbstpk.supabase.co/functions/v1";
+
 async function eliminaDipendenteViaEdgeFunction(userId: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Sessione non valida. Effettua il login.");
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-  const url = `${SUPABASE_URL}/functions/v1/elimina-dipendente`;
-
-  const res = await fetch(url, {
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/elimina-dipendente`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
