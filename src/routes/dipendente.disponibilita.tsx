@@ -145,8 +145,8 @@ function Disponibilita() {
           <div className="space-y-2">
             {giorni.map((g, i) => {
               const dataIso = isoData(g);
-              const disp = byData.get(dataIso);
-              const stato = disp?.stato as Stato | undefined;
+              const disp = byGiorno.get(isoDow(g));
+              const stato = disp?.tipo as Stato | undefined;
               const cfg = stato ? STATO_CONFIG[stato] : null;
               const oggi = dataIso === isoData(new Date());
 
