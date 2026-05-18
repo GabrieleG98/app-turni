@@ -17,38 +17,13 @@ import {
   GIORNI,
 } from "@/lib/date-utils";
 import { addDays, addWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, Trash2, ChevronDown, CalendarCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Save, Loader2, ChevronDown, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { FotoTimbratura } from "@/components/foto-timbratura";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
 });
-
-const SUPABASE_FUNCTIONS_URL = "https://cebipocoyzizvujbstpk.supabase.co/functions/v1";
-
-async function eliminaDipendenteViaEdgeFunction(userId: string): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sessione non valida. Effettua il login.");
-
-  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/elimina-dipendente`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ user_id: userId }),
-  });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(json.error ?? `Errore ${res.status}`);
-  }
-}
 
 function DettaglioDipendente() {
   const { id } = Route.useParams();
@@ -57,9 +32,6 @@ function DettaglioDipendente() {
   const [inizio, setInizio] = useState(inizioSettimana());
   const fine = addDays(inizio, 6);
   const [me, setMe] = useState<string | null>(null);
-  const [delOpen, setDelOpen] = useState(false);
-  const [delConfirm, setDelConfirm] = useState("");
-  const [deleting, setDeleting] = useState(false);
   const [giorniAperti, setGiorniAperti] = useState<Set<string>>(new Set());
   const [paginaTimb, setPaginaTimb] = useState(0);
   const RIGHE_PER_PAGINA = 7;
@@ -359,79 +331,6 @@ function DettaglioDipendente() {
           );
         })()}
       </Card>
-
-      {profilo && me !== id && ownerId !== id && (
-        <Card className="p-6 border-destructive/40">
-          <h2 className="font-semibold text-destructive">Zona pericolo</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Rimuovi {profilo.nome} {profilo.cognome} dal team. L'account e tutti i suoi dati
-            (turni, timbrature, pause, task, disponibilit\u00e0, scambi, correzioni, messaggi e
-            notifiche) verranno eliminati definitivamente.
-          </p>
-          <Button
-            variant="destructive"
-            className="mt-4"
-            onClick={() => { setDelConfirm(""); setDelOpen(true); }}
-          >
-            <Trash2 className="h-4 w-4 mr-2" /> Elimina dal team
-          </Button>
-        </Card>
-      )}
-
-      <AlertDialog open={delOpen} onOpenChange={(o) => !o && !deleting && setDelOpen(false)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Eliminare {profilo?.nome} {profilo?.cognome}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Azione irreversibile. Tutti i dati associati verranno eliminati.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="conf-del">
-              Per confermare, digita{" "}
-              <span className="font-mono font-semibold">
-                {profilo?.nome} {profilo?.cognome}
-              </span>
-            </Label>
-            <Input
-              id="conf-del"
-              value={delConfirm}
-              onChange={(e) => setDelConfirm(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Annulla</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={
-                deleting ||
-                delConfirm.trim() !== `${profilo?.nome ?? ""} ${profilo?.cognome ?? ""}`.trim()
-              }
-              onClick={async (e) => {
-                e.preventDefault();
-                setDeleting(true);
-                try {
-                  await eliminaDipendenteViaEdgeFunction(id);
-                  toast.success("Dipendente eliminato");
-                  qc.invalidateQueries({ queryKey: ["profiles"] });
-                  qc.invalidateQueries({ queryKey: ["user_roles"] });
-                  navigate({ to: "/manager/dipendenti" });
-                } catch (err) {
-                  toast.error("Eliminazione fallita", {
-                    description: err instanceof Error ? err.message : String(err),
-                  });
-                  setDeleting(false);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Elimina definitivamente
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
