@@ -23,13 +23,33 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useServerFn } from "@tanstack/react-start";
-import { eliminaDipendente } from "@/lib/elimina-dipendente.functions";
 import { FotoTimbratura } from "@/components/foto-timbratura";
 
 export const Route = createFileRoute("/manager/dipendenti/$id")({
   component: DettaglioDipendente,
 });
+
+async function eliminaDipendenteViaEdgeFunction(userId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sessione non valida. Effettua il login.");
+
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+  const url = `${SUPABASE_URL}/functions/v1/elimina-dipendente`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.error ?? `Errore ${res.status}`);
+  }
+}
 
 function DettaglioDipendente() {
   const { id } = Route.useParams();
@@ -44,7 +64,6 @@ function DettaglioDipendente() {
   const [giorniAperti, setGiorniAperti] = useState<Set<string>>(new Set());
   const [paginaTimb, setPaginaTimb] = useState(0);
   const RIGHE_PER_PAGINA = 7;
-  const eliminaFn = useServerFn(eliminaDipendente);
 
   const isSettimanaCorrente = isoData(inizio) === isoData(inizioSettimana());
 
@@ -222,125 +241,125 @@ function DettaglioDipendente() {
       </div>
 
       <Card className="p-4">
-  <h2 className="font-semibold mb-3">Timbrature</h2>
-  {timbrature.length === 0 ? (
-    <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
-  ) : (() => {
-    const grouped = timbrature.reduce((acc, t) => {
-      const d = t.data;
-      if (!acc[d]) acc[d] = [];
-      acc[d].push(t);
-      return acc;
-    }, {} as Record<string, typeof timbrature>);
+        <h2 className="font-semibold mb-3">Timbrature</h2>
+        {timbrature.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nessuna timbratura</p>
+        ) : (() => {
+          const grouped = timbrature.reduce((acc, t) => {
+            const d = t.data;
+            if (!acc[d]) acc[d] = [];
+            acc[d].push(t);
+            return acc;
+          }, {} as Record<string, typeof timbrature>);
 
-    const giornatate = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-    const totPagine = Math.ceil(giornatate.length / RIGHE_PER_PAGINA);
-    const giornataVisibili = giornatate.slice(
-      paginaTimb * RIGHE_PER_PAGINA,
-      (paginaTimb + 1) * RIGHE_PER_PAGINA
-    );
-
-    const toggleGiorno = (data: string) => {
-      setGiorniAperti((prev) => {
-        const next = new Set(prev);
-        if (next.has(data)) next.delete(data);
-        else next.add(data);
-        return next;
-      });
-    };
-
-    return (
-      <div className="space-y-1 text-sm">
-        {giornataVisibili.map((data) => {
-          const sessioni = grouped[data];
-          const aperto = giorniAperti.has(data);
-          const oreGiorno = sessioni.reduce(
-            (s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0
+          const giornatate = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+          const totPagine = Math.ceil(giornatate.length / RIGHE_PER_PAGINA);
+          const giornataVisibili = giornatate.slice(
+            paginaTimb * RIGHE_PER_PAGINA,
+            (paginaTimb + 1) * RIGHE_PER_PAGINA
           );
-          return (
-            <div key={data} className="border rounded-md overflow-hidden">
-              <button
-                onClick={() => toggleGiorno(data)}
-                className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${aperto ? "rotate-180" : ""}`} />
-                  <span className="font-medium">{fmtData(new Date(data))}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {sessioni.length} session{sessioni.length > 1 ? "i" : "e"}
-                  </span>
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {fmtOre(oreGiorno)}
-                </span>
-              </button>
 
-              {aperto && (
-                <div className="border-t divide-y bg-muted/10">
-                  {sessioni.map((t) => {
-                    const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
-                    return (
-                      <div key={t.id} className="flex items-center justify-between px-4 py-2 gap-2">
-                        <div className="flex items-center gap-2 flex-1 justify-center">
-                          <FotoTimbratura
-                            url={t.foto_in_url ?? null}
-                            timbratura_id={t.id}
-                            campo="foto_in_url"
-                            onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
-                          />
-                          <span className="text-muted-foreground tabular-nums">
-                            {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                            {" \u2192 "}
-                            {t.orario_clock_out
-                              ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
-                              : <em>in corso</em>}
-                          </span>
-                          <FotoTimbratura
-                            url={t.foto_out_url ?? null}
-                            timbratura_id={t.id}
-                            campo="foto_out_url"
-                            onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
-                          />
-                        </div>
-                        <span className="font-medium shrink-0 w-12 text-right text-xs">
-                          {ore !== null ? fmtOre(ore) : "\u2014"}
+          const toggleGiorno = (data: string) => {
+            setGiorniAperti((prev) => {
+              const next = new Set(prev);
+              if (next.has(data)) next.delete(data);
+              else next.add(data);
+              return next;
+            });
+          };
+
+          return (
+            <div className="space-y-1 text-sm">
+              {giornataVisibili.map((data) => {
+                const sessioni = grouped[data];
+                const aperto = giorniAperti.has(data);
+                const oreGiorno = sessioni.reduce(
+                  (s, t) => s + (oreTimbratura(t.orario_clock_in, t.orario_clock_out) ?? 0), 0
+                );
+                return (
+                  <div key={data} className="border rounded-md overflow-hidden">
+                    <button
+                      onClick={() => toggleGiorno(data)}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${aperto ? "rotate-180" : ""}`} />
+                        <span className="font-medium">{fmtData(new Date(data))}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sessioni.length} session{sessioni.length > 1 ? "i" : "e"}
                         </span>
                       </div>
-                    );
-                  })}
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {fmtOre(oreGiorno)}
+                      </span>
+                    </button>
+
+                    {aperto && (
+                      <div className="border-t divide-y bg-muted/10">
+                        {sessioni.map((t) => {
+                          const ore = oreTimbratura(t.orario_clock_in, t.orario_clock_out);
+                          return (
+                            <div key={t.id} className="flex items-center justify-between px-4 py-2 gap-2">
+                              <div className="flex items-center gap-2 flex-1 justify-center">
+                                <FotoTimbratura
+                                  url={t.foto_in_url ?? null}
+                                  timbratura_id={t.id}
+                                  campo="foto_in_url"
+                                  onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+                                />
+                                <span className="text-muted-foreground tabular-nums">
+                                  {new Date(t.orario_clock_in).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                                  {" \u2192 "}
+                                  {t.orario_clock_out
+                                    ? new Date(t.orario_clock_out).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+                                    : <em>in corso</em>}
+                                </span>
+                                <FotoTimbratura
+                                  url={t.foto_out_url ?? null}
+                                  timbratura_id={t.id}
+                                  campo="foto_out_url"
+                                  onDeleted={() => qc.invalidateQueries({ queryKey: ["timb-dip", id, isoData(inizio)] })}
+                                />
+                              </div>
+                              <span className="font-medium shrink-0 w-12 text-right text-xs">
+                                {ore !== null ? fmtOre(ore) : "\u2014"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {totPagine > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaTimb === 0}
+                    onClick={() => setPaginaTimb((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Precedente
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {paginaTimb + 1} / {totPagine}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaTimb === totPagine - 1}
+                    onClick={() => setPaginaTimb((p) => p + 1)}
+                  >
+                    Successiva <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
                 </div>
               )}
             </div>
           );
-        })}
-
-        {totPagine > 1 && (
-          <div className="flex items-center justify-between pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaTimb === 0}
-              onClick={() => setPaginaTimb((p) => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Precedente
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {paginaTimb + 1} / {totPagine}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaTimb === totPagine - 1}
-              onClick={() => setPaginaTimb((p) => p + 1)}
-            >
-              Successiva <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  })()}
-</Card>
+        })()}
+      </Card>
 
       {profilo && me !== id && ownerId !== id && (
         <Card className="p-6 border-destructive/40">
@@ -395,7 +414,7 @@ function DettaglioDipendente() {
                 e.preventDefault();
                 setDeleting(true);
                 try {
-                  await eliminaFn({ data: { user_id: id } });
+                  await eliminaDipendenteViaEdgeFunction(id);
                   toast.success("Dipendente eliminato");
                   qc.invalidateQueries({ queryKey: ["profiles"] });
                   qc.invalidateQueries({ queryKey: ["user_roles"] });
